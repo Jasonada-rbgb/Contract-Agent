@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Databricks
+.databricks/
+.databrickscfg
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Cursor internal (not the agents/skills/automations)
+.cursor/projects/
+
+# Compiled assets
+*.pyc
+
+# Temporary files
+*.tmp
+*.bak
+
+# AI artifacts (keep structure, ignore large files)
+ai/screenshots/*.png
+ai/screenshots/*.jpg
+
+# PDF contract files (large, stored in Databricks Volumes)
+*.pdf
+
+# Downloaded exports
+*.csv

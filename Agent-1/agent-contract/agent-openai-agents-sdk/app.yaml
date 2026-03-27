@@ -1,0 +1,72 @@
+command:
+  - uv
+  - run
+  - streamlit
+  - run
+  - streamlit_app.py
+  - "--server.port"
+  - "8000"
+  - "--server.headless"
+  - "true"
+  - "--server.address"
+  - "0.0.0.0"
+
+env:
+  - name: MLFLOW_TRACKING_URI
+    value: "databricks"
+  - name: MLFLOW_REGISTRY_URI
+    value: "databricks-uc"
+  - name: MLFLOW_EXPERIMENT_ID
+    valueFrom: "experiment"
+
+  # -------- KB bundle location (production, read-only) --------
+  - name: KB_BUNDLE_BASE
+    value: "/Volumes/bci_rbs_prod/exploratory/warranty_agent/kb_store/kb_bundle_v1"
+
+  # -------- Staging volume (writable, for new contracts) --------
+  - name: STAGING_BUNDLE_BASE
+    value: "/Volumes/mdna_dev/warranty_agent_staging/uploads"
+
+  # -------- LLM endpoints --------
+  # Primary agent model for Q&A reasoning + reranking + profile extraction
+  - name: LLM_ENDPOINT
+    value: "databricks-claude-opus-4-6"
+
+  # Semantic reranker + profile extraction (same as LLM for max accuracy)
+  - name: RERANK_ENDPOINT
+    value: "databricks-claude-opus-4-6"
+
+  # Vision-capable model for OCR of scanned PDFs
+  - name: VISION_ENDPOINT
+    value: "databricks-claude-opus-4-6"
+
+  # Reasoning model for claims evaluation (multi-step rule application)
+  - name: REASONING_ENDPOINT
+    value: "openai_o3"
+
+  # Embedding endpoint for hybrid vector retrieval
+  - name: EMBEDDING_ENDPOINT
+    value: "databricks-gte-large-en"
+
+  # No output token limit -- let the model use its full capacity
+  # - name: AGENT_MAX_OUTPUT_TOKENS
+  #   value: removed
+
+  # -------- Ingestion notebook path --------
+  - name: INGEST_NOTEBOOK_PATH
+    value: "/Workspace/Users/adj1de@bosch.com/Warranty Agent/Warranty Agent Jobs/15_ingest_to_staging"
+
+# -------- App resources (serving endpoint access for app SP) --------
+resources:
+  - name: claude-opus-4-6
+    serving_endpoint: databricks-claude-opus-4-6
+    permission: CAN_QUERY
+  - name: gte-large-en
+    serving_endpoint: databricks-gte-large-en
+    permission: CAN_QUERY
+  - name: o3-reasoning
+    serving_endpoint: openai_o3
+    permission: CAN_QUERY
+  - name: gemini-25-flash
+    serving_endpoint: gemini_25_flash
+    permission: CAN_QUERY

@@ -1,0 +1,64 @@
+bundle:
+  name: agent_openai_agents_sdk
+
+resources:
+  apps:
+    agent_openai_agents_sdk:
+      name: "agent-openai-agents-sdk"
+      description: "Warranty Contract Agent -- Streamlit + AgentServer"
+      source_code_path: ./
+      config:
+        command:
+          - uv
+          - run
+          - streamlit
+          - run
+          - streamlit_app.py
+          - "--server.port"
+          - "8000"
+          - "--server.headless"
+          - "true"
+          - "--server.address"
+          - "0.0.0.0"
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "databricks"
+          - name: MLFLOW_REGISTRY_URI
+            value: "databricks-uc"
+          - name: MLFLOW_EXPERIMENT_ID
+            value_from: "experiment"
+
+          # -------- KB bundle location (production, read-only) --------
+          - name: KB_BUNDLE_BASE
+            value: "/Volumes/bci_rbs_prod/exploratory/warranty_agent/kb_store/kb_bundle_v1"
+
+          # -------- Staging volume (writable, for new contracts) --------
+          - name: STAGING_BUNDLE_BASE
+            value: "/Volumes/mdna_dev/warranty_agent_staging/uploads"
+
+          # -------- LLM endpoints --------
+          - name: LLM_ENDPOINT
+            value: "gpt_41"
+
+          # -------- Ingestion notebook path --------
+          - name: INGEST_NOTEBOOK_PATH
+            value: "/Workspace/Users/adj1de@bosch.com/Warranty Agent/Warranty Agent Jobs/15_ingest_to_staging"
+
+      # Resources which this app has access to
+      resources:
+        - name: 'experiment'
+          experiment:
+            experiment_id: "1833642147499396"
+            permission: 'CAN_MANAGE'
+
+targets:
+  dev:
+    mode: development
+    default: true
+
+  prod:
+    mode: production
+    resources:
+      apps:
+        agent_openai_agents_sdk:
+          name: agent-openai-agents-sdk

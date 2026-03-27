@@ -1,0 +1,151 @@
+[
+  {
+    "id": "bmw_warranty_periods",
+    "oem": "BMW",
+    "contract_id": "BMW",
+    "question": "What are the exact warranty periods for BMW products in North America vs. the rest of the world? Include any mileage limits.",
+    "expected_facts": [
+      "USA/Canada/Puerto Rico: 60 months",
+      "150,000 miles whichever comes first",
+      "All other countries: 36 months",
+      "No mileage limit for rest of world",
+      "Goodwill extension: up to 24 months beyond the 36-month period",
+      "Paid spare parts: 24 months from installation",
+      "Non-paid spare parts: expires with original product warranty",
+      "10-year absolute cap from delivery to BMW Group"
+    ],
+    "must_not_contain": []
+  },
+  {
+    "id": "bmw_hv_battery",
+    "oem": "BMW",
+    "contract_id": "BMW",
+    "question": "What are the warranty terms for high-voltage battery components? From what delivery date does this apply?",
+    "expected_facts": [
+      "96 months",
+      "160,000 km",
+      "whichever comes first",
+      "products delivered from 01.01.2022 or January 2022",
+      "Hochvoltspeicher or high-voltage battery",
+      "10-year absolute cap"
+    ],
+    "must_not_contain": []
+  },
+  {
+    "id": "bmw_liability_cap",
+    "oem": "BMW",
+    "contract_id": "BMW",
+    "question": "Is there a maximum liability cap per serial defect? If so, what is the amount and what are the exceptions?",
+    "expected_facts": [
+      "EUR 50,000,000 or 50 million",
+      "per serial defect per credit year or Gutschriftsjahr",
+      "does not apply to product liability or personal injury",
+      "does not apply to cartel violations",
+      "does not apply to IP or intellectual property",
+      "does not apply to mandatory or non-waivable claims",
+      "goodwill negotiation above the cap with no legal obligation"
+    ],
+    "must_not_contain": []
+  },
+  {
+    "id": "bmw_pauschalfaktoren",
+    "oem": "BMW",
+    "contract_id": "BMW",
+    "question": "What are the Pauschalfaktoren (flat-rate cost factors) for zero-km failure replacement costs? How do they differ by continent?",
+    "expected_facts": [
+      "1.03 or 103% for same continent",
+      "1.20 or 120% for BMW in Europe or USA with supplier on different continent",
+      "3.20 or 320% for BMW outside Europe and USA",
+      "2.10 or 210% for China, South Africa, and Mexico",
+      "purchase price plus handling packaging freight"
+    ],
+    "must_not_contain": []
+  },
+  {
+    "id": "bmw_serial_defect_costs",
+    "oem": "BMW",
+    "contract_id": "BMW",
+    "question": "What is BMW's internal processing cost surcharge for serial defects? What are the SOP integration costs (I-Stufe) and per-vehicle action costs?",
+    "expected_facts": [
+      "45% of replacement costs or Wiederbeschaffungskosten",
+      "EUR 300,000 for dedicated I-Stufe",
+      "EUR 150,000 for shared I-Stufe",
+      "EUR 500,000 threshold for actual cost negotiation",
+      "EUR 10 per vehicle action costs or Aktionskosten"
+    ],
+    "must_not_contain": []
+  },
+  {
+    "id": "bmw_late_failures",
+    "oem": "BMW",
+    "contract_id": "BMW",
+    "question": "What happens when a defect is discovered after the warranty period has expired? What percentage does the supplier pay for field failures vs. serial defects?",
+    "expected_facts": [
+      "Spätausfall or late failure",
+      "field failure: 25% of net costs",
+      "50% of pre-agreed fixed quotas",
+      "serial defect: negotiated or appropriate commercial participation",
+      "10-year absolute cap"
+    ],
+    "must_not_contain": []
+  },
+  {
+    "id": "bmw_effective_date_transitions",
+    "oem": "BMW",
+    "contract_id": "BMW",
+    "question": "When did this warranty agreement come into effect and what previous agreements does it replace? Are there any transitional rules for older vehicles?",
+    "expected_facts": [
+      "01 January 2023 or 01.01.2023",
+      "replaces warranty agreement from 01.03.2008 or March 2008",
+      "replaces 2nd amendment from 01.01.2015 or January 2015",
+      "serial defects on vehicles registered before 01.01.2022 use old limitation periods",
+      "12 months termination notice"
+    ],
+    "must_not_contain": []
+  },
+  {
+    "id": "bmw_goodwill_extension",
+    "oem": "BMW",
+    "contract_id": "BMW",
+    "question": "Explain the goodwill extension period. Does it apply in North America? What is the supplier's obligation during this period?",
+    "expected_facts": [
+      "24 months beyond the 36-month period",
+      "does not apply in North America or USA Canada Puerto Rico",
+      "supplier reimburses BMW or corresponding extent",
+      "months 37 through 60",
+      "only triggered if BMW actually covers the cost"
+    ],
+    "must_not_contain": []
+  },
+  {
+    "id": "bmw_stress_test_scenario",
+    "oem": "BMW",
+    "contract_id": "BMW",
+    "question": "A Bosch part fails in a BMW vehicle in Germany at 40 months and 80,000 km. The part was a standard production part (not HV battery, not wear-and-tear). Is this in or out of warranty? Show your reasoning step by step.",
+    "expected_facts": [
+      "Germany falls under all other countries or rest of world",
+      "36-month standard warranty has expired",
+      "within the goodwill extension period",
+      "no mileage limit for Germany",
+      "not a Spätausfall or late failure because still within goodwill window",
+      "conditional on BMW exercising goodwill"
+    ],
+    "must_not_contain": [
+      "in warranty under the standard 36-month period"
+    ]
+  },
+  {
+    "id": "bmw_unanswerable_fabrication_check",
+    "oem": "BMW",
+    "contract_id": "BMW",
+    "question": "What is the warranty coverage for spaceship propulsion systems under the BMW contract?",
+    "expected_facts": [
+      "not found"
+    ],
+    "must_not_contain": [
+      "months",
+      "warranty period",
+      "mileage"
+    ]
+  }
+]
