@@ -9,13 +9,12 @@
 | Metric | Count | % |
 |--------|------:|--:|
 | Total Claims | 279 | 100% |
-| Auto-Closed (DMYA) | 184 | 66% |
-| Contract Agent Evaluated | 95 | 34% |
-| **In Warranty** | **76** | **80% of evaluated** |
-| Requires Review | 11 | 12% of evaluated |
-| Out of Warranty | 8 | 8% of evaluated |
-
-> **260 of 279 claims (93%) require no human action.** Only 19 claims (7%) need QC creation or human review.
+| DMYA (closed at SQW) | 184 | 66% |
+| Sent to Plant | 34 | 12% |
+| DMYA Exceptions | 61 | 22% |
+| **Contract Agent: In Warranty** | **76** | **80% of 95 evaluated** |
+| **Contract Agent: Requires Review** | **11** | **12% of 95 evaluated** |
+| **Contract Agent: Out of Warranty** | **8** | **8% of 95 evaluated** |
 
 ---
 
@@ -23,40 +22,61 @@
 
 ### Before: Manual Process
 
-| Step | Claims |
-|------|-------:|
-| DMYA claims auto-closed | 184 |
-| Claims sent to plant for investigation | 34 |
-| DMYA Exceptions sent to plant | 61 |
-| **Total needing manual QC creation** | **95** |
-| **Estimated human hours (5 min/QC)** | **~8 hours** |
+Every claim in the pallet requires a QC to be created in the Mendix CRA, regardless of status. There are three manual tasks per pallet:
 
-All 95 non-DMYA claims would require a QC to be manually created in the Mendix CRA, regardless of whether the claim is actually within warranty.
+| Task | Claims | Time per QC | Total Time |
+|------|-------:|------------:|-----------:|
+| Create 279 QCs in Mendix CRA | 279 | 10 min | **46.5 hours** |
+| Ship 95 parts to plant for investigation | 95 | 10 min | **15.8 hours** |
+| Assign DMYA status to 184 QCs | 184 | 10 min | **30.7 hours** |
+| **Total manual effort per pallet** | | | **93.0 hours** |
+
+All 279 complaints are registered as QCs. 95 parts are physically shipped to the plant. The remaining 184 are closed as DMYA in the system.
 
 ### After: Agent Pipeline
 
-| Step | Claims |
-|------|-------:|
-| DMYA claims auto-closed | 184 |
-| In-warranty claims auto-approved | 76 |
-| Requires human review | 11 |
-| Out-of-warranty (QC needed) | 8 |
-| **Total needing manual QC creation** | **19** |
-| **Estimated human hours (5 min/QC)** | **~1.5 hours** |
+The agent pipeline automates QC creation, contract evaluation, and DMYA assignment. Only claims that genuinely need human attention require manual work.
 
-76 claims automatically verified as in-warranty by the Contract Agent. **80% reduction in QCs that need to be created.**
+| Task | Claims | Time per QC | Total Time |
+|------|-------:|------------:|-----------:|
+| Agent creates 279 QCs in Mendix CRA | 279 | ~30 sec (automated) | **~2.3 hours** |
+| Agent assigns DMYA status to 184 QCs | 184 | ~5 sec (automated) | **~15 min** |
+| Agent evaluates 95 claims via Contract Agent | 95 | ~6 sec (automated) | **~10 min** |
+| Human reviews 11 flagged claims | 11 | 10 min | **1.8 hours** |
+| Human processes 8 out-of-warranty rejections | 8 | 10 min | **1.3 hours** |
+| Ship 19 parts to plant (review + out-of-warranty) | 19 | 10 min | **3.2 hours** |
+| **Total effort per pallet** | | | **~8.9 hours** |
+
+Of which only **6.3 hours** is human effort -- the rest is automated.
+
+### Time Savings
+
+| Metric | Before (Manual) | After (Agent Pipeline) | Saving |
+|--------|----------------:|-----------------------:|-------:|
+| Human effort per pallet | 93.0 hours | 6.3 hours | **86.7 hours (93%)** |
+| QCs created manually | 279 | 0 | **100% automated** |
+| Parts shipped to plant | 95 | 19 | **80% reduction** |
+| Claims needing human review | 279 | 19 | **93% reduction** |
+
+> **93% reduction in human effort.** 76 claims that would have been shipped to the plant for investigation are automatically confirmed as in-warranty by the Contract Agent, saving unnecessary shipping and plant investigation costs.
 
 ---
 
 ## Contract Agent Decision Breakdown
 
-```
-Evaluated: 95 claims
+Of the 95 claims that needed contract evaluation:
 
+```
 in_warranty      ████████████████████████████████████████  76  (80%)
 requires_review  ██████                                    11  (12%)
 out_of_warranty  ████                                       8  ( 8%)
 ```
+
+| Decision | Count | What happens | Shipped to plant? |
+|----------|------:|-------------|:-----------------:|
+| In warranty (high confidence) | 76 | QC created, closed automatically -- no plant investigation | No |
+| Requires review | 11 | QC created, flagged for human review | Yes |
+| Out of warranty | 8 | QC created, rejected -- invoice dispute or charge back | Yes |
 
 ---
 
@@ -116,13 +136,27 @@ Source: JLR Warranty Agreement Section 1.1.2 -- "3 years or 60,000 miles (whiche
 
 ---
 
+## Full Pallet Breakdown (All 279 Claims)
+
+| Status | Count | QC Created | Shipped to Plant | Human Action |
+|--------|------:|:----------:|:----------------:|:------------:|
+| DMYA (covered by agreement) | 184 | Yes (automated) | No | None |
+| In warranty (contract verified) | 76 | Yes (automated) | No | None |
+| Requires review (flagged) | 11 | Yes (automated) | Yes | Review needed |
+| Out of warranty (rejected) | 8 | Yes (automated) | Yes | Process rejection |
+| **Total** | **279** | **279 (all automated)** | **19** | **19 claims** |
+
+---
+
 ## Pipeline Processing Statistics
 
 | Metric | Value |
 |--------|-------|
 | Total processing time | ~10 minutes (591.8s) |
-| Average per claim | 6.2 seconds |
-| Parallel workers | 20 |
+| Average per claim evaluation | 6.2 seconds |
+| Estimated CRA form fill time | ~30 seconds per QC |
+| Estimated total CRA automation | ~2.3 hours for 279 QCs |
+| Parallel evaluation workers | 20 |
 | Reasoning model | Claude Opus 4.5 (`databricks-claude-opus-4-5`) |
 | Contract KB | 52 chunks (1 document: JLR Warranty Agreement) |
 | Retrieval method | Hybrid BM25 + embeddings with semantic reranking |
@@ -135,13 +169,11 @@ Source: JLR Warranty Agreement Section 1.1.2 -- "3 years or 60,000 miles (whiche
 
 1. **Pallet Enrichment** -- SQL enrichment joins STAR label data with vehicle, claims, and MPN tables. Applies DMYA exception rules and model year threshold to assign Status per claim.
 
-2. **Pre-filter** -- Claims with Status "Close at SQW - CAT4 - Covered by DMYA Agreement" or "Not Bosch" are auto-skipped (no contract evaluation needed).
+2. **Contract Evaluation** -- Non-DMYA claims are sent to the Contract Agent for warranty verification. Deep multi-query retrieval with semantic reranking extracts warranty periods from the ingested contract. Each claim is evaluated by Claude Opus 4.5: market identification, warranty period calculation, time/mileage checks, exclusion checks, and technician verbatim analysis.
 
-3. **Warranty Term Resolution** -- Deep multi-query retrieval with semantic reranking extracts warranty periods, market definitions, and exclusions from the ingested contract. Results are cached per contract so this only runs once regardless of claim count.
+3. **QC Creation (CRA)** -- All 279 claims get a QC created in the Mendix CRA via the headless CRA API app. DMYA claims are auto-assigned DMYA status. In-warranty claims are auto-closed. Out-of-warranty and review claims are flagged for human attention.
 
-4. **Per-Claim Evaluation** -- Each claim is evaluated by Claude Opus 4.5 against the contract passages: market identification, warranty period calculation, time/mileage checks, exclusion checks, and technician verbatim analysis for root cause indicators.
-
-5. **Decision Output** -- Structured CSV/JSON with decision, confidence, reasoning, and QC-required flag written to UC Volume for downstream consumption by the CRA agent.
+4. **Decision Output** -- Structured CSV/JSON decision log written to UC Volume with decision, confidence, reasoning, and QC reference for audit trail.
 
 ### Key Fix Applied
 
@@ -153,26 +185,32 @@ Resolved **retrieval depth asymmetry** between Q&A mode and claims evaluator. Th
 Pallet arrives (JLR STAR data)
     |
     v
-Pallet Agent (Databricks Job)
-    - Detect new pallets
+Pallet Agent (Databricks Job -- daily 08:00)
+    - Detect new pallets (skip already processed)
     - Enrich via SQL (vehicle joins, Status CASE logic)
-    - Generate Excel Main Reports
+    - Generate Excel Main Reports to UC Volume
     |
     v
-Pre-filter (claim_router.py)
-    - DMYA / Not Bosch --> skip (record only)
-    - Send to plant / Exception --> evaluate
+Claim Router (claim_router.py)
+    - ALL claims --> CRA API for QC creation
+    - DMYA claims --> auto-assign DMYA status in QC
+    - Non-DMYA claims --> Contract Agent evaluation
     |
     v
-Contract Agent (Databricks App)
+Contract Agent (Databricks App API)
     - Load contract KB (warranty agreement chunks)
-    - Deep warranty term resolution (once per contract)
+    - Deep warranty term resolution (cached per contract)
     - Per-claim: hybrid retrieval + rerank + LLM reasoning
-    - Return: decision, confidence, reasoning, rule applied
+    - Return: in_warranty / out_of_warranty / requires_review
+    |
+    v
+CRA App (Databricks App -- headless API)
+    - Playwright + Chromium automation
+    - Fill Mendix CRA form (Customer/Material/Vehicle/Complaint)
+    - Create QC, return reference number
     |
     v
 Decision Output (UC Volume)
-    - decision_log_{run_id}.csv
-    - decision_log_{run_id}.json
-    - Ready for CRA agent consumption
+    - decision_log_{run_id}.csv / .json
+    - Full audit trail with contract reasoning
 ```
