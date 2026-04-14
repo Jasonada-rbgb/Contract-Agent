@@ -1,4 +1,7 @@
-"""Ingestion helpers -- upload PDFs, OCR via vision model, embed, write bundle."""
+"""Ingestion helpers -- upload documents, OCR via vision model, embed, write bundle.
+
+Supported formats: PDF, MSG, PPTX, XLSX/XLS, HTML/HTM/MHT, PNG/BMP/JPG.
+"""
 
 import base64
 import hashlib
@@ -53,16 +56,16 @@ _VISION_TIMEOUT_SECONDS = 600
 
 
 # ---------------------------------------------------------------------------
-# Upload PDFs
+# Upload files to staging
 # ---------------------------------------------------------------------------
 
-def upload_pdfs(
+def upload_files(
     wc: WorkspaceClient,
     oem: str,
     kb_id: str,
     files: list[tuple[str, bytes]],
 ) -> list[str]:
-    """Write uploaded PDF bytes to staging volume."""
+    """Write uploaded file bytes to staging volume."""
     dest_dir = staging_raw_dir(oem, kb_id)
     paths = []
     for fname, data in files:
@@ -71,6 +74,9 @@ def upload_pdfs(
         paths.append(p)
         log.info("Uploaded %s (%d bytes)", p, len(data))
     return paths
+
+
+upload_pdfs = upload_files
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +368,296 @@ def _extract_text_smart(
 
 
 # ---------------------------------------------------------------------------
+# Text extraction: MSG (Outlook emails)
+# ---------------------------------------------------------------------------
+
+def _extract_text_msg(msg_bytes: bytes, **_kwargs) -> list[dict]:
+    """Extract text from an Outlook .msg file (subject, sender, date, body)."""
+    try:
+        import extract_msg
+    except ImportError:
+        log.warning("extract-msg not installed -- cannot process .msg files")
+        return []
+
+    try:
+        msg = extract_msg.Message(io.BytesIO(msg_bytes))
+        parts = []
+        if msg.subject:
+            parts.append(f"Subject: {msg.subject}")
+        if msg.sender:
+            parts.append(f"From: {msg.sender}")
+        if msg.date:
+            parts.append(f"Date: {msg.date}")
+        if msg.body:
+            parts.append(f"\n{msg.body.strip()}")
+
+        text = "\n".join(parts).strip()
+        pages = [{"page": 1, "text": text}] if text else []
+
+        for att in (msg.attachments or []):
+            att_name = getattr(att, "longFilename", None) or getattr(att, "shortFilename", "") or ""
+            att_data = getattr(att, "data", None)
+            if not att_data or not att_name:
+                continue
+            ext = os.path.splitext(att_name)[1].lower()
+            if ext in _FORMAT_EXTRACTORS and ext != ".msg":
+                try:
+                    att_pages = _extract_text_by_format(
+                        None, att_data, att_name, progress_callback=None
+                    )
+                    for p in att_pages:
+                        p["text"] = f"[Attachment: {att_name}]\n{p['text']}"
+                    pages.extend(att_pages)
+                except Exception as exc:
+                    log.debug("Could not extract MSG attachment %s: %s", att_name, exc)
+
+        msg.close()
+        return pages
+    except Exception as exc:
+        log.warning("MSG extraction failed: %s", exc)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Text extraction: PPTX (PowerPoint)
+# ---------------------------------------------------------------------------
+
+def _extract_text_pptx(pptx_bytes: bytes, **_kwargs) -> list[dict]:
+    """Extract slide text and speaker notes from a PowerPoint file."""
+    try:
+        from pptx import Presentation
+    except ImportError:
+        log.warning("python-pptx not installed -- cannot process .pptx files")
+        return []
+
+    try:
+        prs = Presentation(io.BytesIO(pptx_bytes))
+        pages = []
+        for slide_num, slide in enumerate(prs.slides, 1):
+            texts = []
+            for shape in slide.shapes:
+                if shape.has_text_frame:
+                    for para in shape.text_frame.paragraphs:
+                        line = para.text.strip()
+                        if line:
+                            texts.append(line)
+                if shape.has_table:
+                    for row in shape.table.rows:
+                        row_vals = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                        if row_vals:
+                            texts.append(" | ".join(row_vals))
+            if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
+                notes = slide.notes_slide.notes_text_frame.text.strip()
+                if notes:
+                    texts.append(f"[Speaker notes] {notes}")
+            text = "\n".join(texts).strip()
+            if text:
+                pages.append({"page": slide_num, "text": text})
+        return pages
+    except Exception as exc:
+        log.warning("PPTX extraction failed: %s", exc)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Text extraction: XLSX / XLS (Excel)
+# ---------------------------------------------------------------------------
+
+_XLSX_MAX_ROWS = 5000
+
+def _extract_text_xlsx(xlsx_bytes: bytes, **_kwargs) -> list[dict]:
+    """Extract text from Excel spreadsheets, one 'page' per sheet."""
+    try:
+        import openpyxl
+    except ImportError:
+        log.warning("openpyxl not installed -- cannot process .xlsx files")
+        return []
+
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(xlsx_bytes), data_only=True, read_only=True)
+        pages = []
+        for sheet_num, ws in enumerate(wb.worksheets, 1):
+            lines = []
+            row_count = 0
+            for row in ws.iter_rows(values_only=True):
+                row_count += 1
+                if row_count > _XLSX_MAX_ROWS:
+                    lines.append(f"[... truncated at {_XLSX_MAX_ROWS} rows ...]")
+                    break
+                vals = [str(v).strip() for v in row if v is not None and str(v).strip()]
+                if vals:
+                    lines.append(" | ".join(vals))
+            text = f"Sheet: {ws.title}\n" + "\n".join(lines)
+            text = text.strip()
+            if text and len(text) > len(f"Sheet: {ws.title}"):
+                pages.append({"page": sheet_num, "text": text})
+        wb.close()
+        return pages
+    except Exception as exc:
+        log.warning("XLSX extraction failed: %s", exc)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Text extraction: HTML / HTM / MHT
+# ---------------------------------------------------------------------------
+
+def _extract_text_html(html_bytes: bytes, **_kwargs) -> list[dict]:
+    """Extract visible text from HTML or MHT files."""
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        log.warning("beautifulsoup4 not installed -- cannot process HTML files")
+        return []
+
+    try:
+        raw = html_bytes
+        content_type = "html"
+
+        decoded = html_bytes.decode("utf-8", errors="ignore")
+        if decoded.lstrip().startswith("From:") or "Content-Type:" in decoded[:500]:
+            content_type = "mht"
+            import email.parser
+            msg = email.parser.Parser().parsestr(decoded)
+            if msg.is_multipart():
+                for part in msg.walk():
+                    ct = part.get_content_type() or ""
+                    if "html" in ct:
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            raw = payload
+                            break
+                    elif "plain" in ct and raw == html_bytes:
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            raw = payload
+            else:
+                payload = msg.get_payload(decode=True)
+                if payload:
+                    raw = payload
+
+        soup = BeautifulSoup(raw, "html.parser")
+        for tag in soup(["script", "style", "meta", "link"]):
+            tag.decompose()
+        text = soup.get_text(separator="\n", strip=True)
+        if text and len(text.strip()) > 10:
+            return [{"page": 1, "text": text.strip()}]
+        return []
+    except Exception as exc:
+        log.warning("HTML/MHT extraction failed: %s", exc)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Text extraction: Images (PNG, BMP, JPG) via vision OCR
+# ---------------------------------------------------------------------------
+
+def _extract_text_image(
+    wc: WorkspaceClient | None,
+    img_bytes: bytes,
+    fname: str = "",
+    progress_callback=None,
+    **_kwargs,
+) -> list[dict]:
+    """Extract text from an image file using vision OCR."""
+    if wc is None:
+        log.warning("WorkspaceClient required for image OCR -- skipping %s", fname)
+        return []
+
+    ext = os.path.splitext(fname)[1].lower()
+    media_type = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".bmp": "image/bmp",
+    }.get(ext, "image/png")
+
+    if ext == ".bmp":
+        try:
+            from PIL import Image
+            img = Image.open(io.BytesIO(img_bytes))
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            img_bytes = buf.getvalue()
+            media_type = "image/png"
+        except ImportError:
+            log.warning("Pillow needed to convert BMP to PNG for OCR")
+            return []
+
+    b64_len = ((len(img_bytes) + 2) // 3) * 4
+    if b64_len > _MAX_B64_BYTES:
+        try:
+            from PIL import Image
+            img = Image.open(io.BytesIO(img_bytes))
+            for q in (70, 50, 30):
+                buf = io.BytesIO()
+                img.convert("RGB").save(buf, format="JPEG", quality=q, optimize=True)
+                img_bytes = buf.getvalue()
+                media_type = "image/jpeg"
+                b64_len = ((len(img_bytes) + 2) // 3) * 4
+                if b64_len <= _MAX_B64_BYTES:
+                    break
+        except ImportError:
+            pass
+
+    try:
+        endpoint = _vision_endpoint()
+        if progress_callback:
+            progress_callback(f"  OCR image {fname}...")
+        text = _ocr_page_vision(wc, 1, img_bytes, media_type, endpoint)
+        if text and len(text.strip()) > 10:
+            return [{"page": 1, "text": text.strip()}]
+        return []
+    except Exception as exc:
+        log.warning("Image OCR failed for %s: %s", fname, exc)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Format router
+# ---------------------------------------------------------------------------
+
+_SUPPORTED_EXTENSIONS = frozenset({
+    ".pdf", ".msg", ".pptx",
+    ".xlsx", ".xls",
+    ".htm", ".html", ".mht",
+    ".png", ".bmp", ".jpg", ".jpeg",
+})
+
+_NEEDS_WORKSPACE_CLIENT = frozenset({".pdf", ".png", ".bmp", ".jpg", ".jpeg"})
+
+
+def _extract_text_by_format(
+    wc: WorkspaceClient | None,
+    file_bytes: bytes,
+    filename: str,
+    progress_callback=None,
+) -> list[dict]:
+    """Route to the correct text extractor based on file extension."""
+    ext = os.path.splitext(filename)[1].lower()
+
+    if ext == ".pdf":
+        if wc is None:
+            log.warning("WorkspaceClient required for PDF OCR fallback")
+            pages, _ = _extract_text_pypdf(file_bytes)
+            return pages
+        return _extract_text_smart(wc, file_bytes, filename, progress_callback)
+    elif ext == ".msg":
+        return _extract_text_msg(file_bytes)
+    elif ext == ".pptx":
+        return _extract_text_pptx(file_bytes)
+    elif ext in (".xlsx", ".xls"):
+        return _extract_text_xlsx(file_bytes)
+    elif ext in (".htm", ".html", ".mht"):
+        return _extract_text_html(file_bytes)
+    elif ext in (".png", ".bmp", ".jpg", ".jpeg"):
+        return _extract_text_image(wc, file_bytes, filename, progress_callback)
+    else:
+        log.warning("Unsupported file format: %s (from %s)", ext, filename)
+        return []
+
+
+# ---------------------------------------------------------------------------
 # Chunking
 # ---------------------------------------------------------------------------
 
@@ -462,32 +758,41 @@ def ingest_inline(
     wc: WorkspaceClient,
     oem: str,
     kb_id: str,
-    pdf_files: list[tuple[str, bytes]],
+    files: list[tuple[str, bytes]] | None = None,
     chunk_size: int = 1000,
     chunk_overlap: int = 200,
     progress_callback=None,
+    *,
+    pdf_files: list[tuple[str, bytes]] | None = None,
 ) -> dict[str, Any]:
-    """Process PDFs entirely in-process with vision OCR + embeddings."""
+    """Process documents in-process: extract text, chunk, embed, write bundle.
+
+    Accepts any supported format (PDF, MSG, PPTX, XLSX, HTML, images).
+    The ``pdf_files`` kwarg is kept for backward compatibility.
+    """
+    file_list = files or pdf_files or []
+
     def _progress(msg: str):
         if progress_callback:
             progress_callback(msg)
         log.info(msg)
 
-    _progress(f"Processing {len(pdf_files)} PDF(s) for {oem}/{kb_id}...")
+    _progress(f"Processing {len(file_list)} file(s) for {oem}/{kb_id}...")
 
     all_rows: list[dict] = []
     failed_docs: list[str] = []
 
-    for doc_idx, (fname, pdf_bytes) in enumerate(pdf_files):
-        _progress(f"Parsing {fname} ({doc_idx + 1}/{len(pdf_files)})...")
-        pages = _extract_text_smart(wc, pdf_bytes, fname, progress_callback)
+    for doc_idx, (fname, file_bytes) in enumerate(file_list):
+        _progress(f"Parsing {fname} ({doc_idx + 1}/{len(file_list)})...")
+        pages = _extract_text_by_format(wc, file_bytes, fname, progress_callback)
 
         if not pages:
             log.warning("No text extracted from %s", fname)
             failed_docs.append(fname)
             continue
 
-        slug = re.sub(r"(?i)\.pdf$", "", fname)
+        ext = os.path.splitext(fname)[1].lower()
+        slug = re.sub(rf"(?i)\{re.escape(ext)}$", "", fname) if ext else fname
         slug = re.sub(r"[^A-Za-z0-9]+", "_", slug).strip("_").lower() or "doc"
         source_path = f"{staging_raw_dir(oem, kb_id)}/{fname}"
 
@@ -520,7 +825,7 @@ def ingest_inline(
     if not all_rows:
         return {
             "chunk_count": 0, "doc_count": 0, "status": "error",
-            "message": f"No text extracted from any PDF. Failed: {failed_docs}",
+            "message": f"No text extracted from any file. Failed: {failed_docs}",
         }
 
     _progress(f"Computing embeddings for {len(all_rows)} chunks...")
@@ -544,7 +849,7 @@ def ingest_inline(
     )
 
     _progress("Updating manifest...")
-    doc_count = len(pdf_files) - len(failed_docs)
+    doc_count = len(file_list) - len(failed_docs)
     update_staging_manifest(wc, oem, kb_id, len(all_rows), doc_count)
 
     status = "success" if not failed_docs else "partial"

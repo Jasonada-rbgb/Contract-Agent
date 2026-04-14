@@ -42,11 +42,24 @@ env:
 
   # Reasoning model for claims evaluation (multi-step rule application)
   - name: REASONING_ENDPOINT
-    value: "openai_o3"
+    value: "databricks-claude-opus-4-6"
 
   # Embedding endpoint for hybrid vector retrieval
   - name: EMBEDDING_ENDPOINT
     value: "databricks-gte-large-en"
+
+  # Hidden Q&A council (feature-flagged, off by default)
+  # Set to "true" to enable multi-model synthesis for Q&A answers.
+  - name: COUNCIL_ENABLED
+    value: "false"
+
+  # -------- Timeout configuration --------
+  - name: AGENT_TIMEOUT_SECONDS
+    value: "420"
+  - name: AGENT_WARN_THRESHOLD_S
+    value: "120"
+  - name: RETRIEVAL_TIMEOUT_S
+    value: "180"
 
   # No output token limit -- let the model use its full capacity
   # - name: AGENT_MAX_OUTPUT_TOKENS
@@ -58,6 +71,9 @@ env:
 
 # -------- App resources (serving endpoint access for app SP) --------
 resources:
+  - name: openai-gpt5
+    serving_endpoint: openai_gpt5
+    permission: CAN_QUERY
   - name: claude-opus-4-6
     serving_endpoint: databricks-claude-opus-4-6
     permission: CAN_QUERY
@@ -70,3 +86,14 @@ resources:
   - name: gemini-25-flash
     serving_endpoint: gemini_25_flash
     permission: CAN_QUERY
+  - name: gemini-25-pro
+    serving_endpoint: gemini_25_pro
+    permission: CAN_QUERY
+  - name: gpt-41
+    serving_endpoint: gpt_41
+    permission: CAN_QUERY
+  - name: anthropic-claude-opus-41
+    serving_endpoint: anthropic_claude_opus_41
+    permission: CAN_QUERY
+
+

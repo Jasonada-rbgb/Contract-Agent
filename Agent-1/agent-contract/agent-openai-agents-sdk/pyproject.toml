@@ -14,6 +14,9 @@ dependencies = [
     "databricks-agents>=1.9.3,<2.0.0",
     "mlflow>=3.10.0,<3.11.0",
     "openai-agents>=0.12.0,<0.13.0",
+    "openai>=2.8.0,<3.0.0",
+    "langgraph>=0.2.60,<0.4.0",
+    "langsmith>=0.1.147,<0.4.0",
     "python-dotenv>=1.2.1",
     "litellm>=1.0.0",
     "pandas>=2.0.0",
@@ -25,6 +28,9 @@ dependencies = [
     "pypdf>=4.0.0",
     "PyMuPDF>=1.24.0",
     "Pillow>=10.0.0",
+    "extract-msg>=0.50.0",
+    "python-pptx>=1.0.0",
+    "beautifulsoup4>=4.12.0",
 ]
 
 [build-system]

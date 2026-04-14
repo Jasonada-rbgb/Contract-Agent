@@ -3,6 +3,8 @@ import logging
 import math
 import os
 import re
+import threading
+import time
 from collections import Counter, defaultdict
 from datetime import datetime
 from typing import Any, AsyncGenerator
@@ -39,6 +41,8 @@ logging.getLogger("mlflow.utils.autologging_utils").setLevel(logging.ERROR)
 litellm.suppress_debug_info = True
 
 log = logging.getLogger(__name__)
+
+_CURRENT_SESSION_ID: str | None = None
 
 
 @function_tool
@@ -87,34 +91,119 @@ def _llm_endpoint() -> str:
     return (
         os.getenv("RERANK_ENDPOINT")
         or os.getenv("LLM_ENDPOINT")
-        or "gpt_41"
+        or "databricks-claude-opus-4-6"
     ).strip()
+
+
+def _supports_temperature(endpoint: str) -> bool:
+    ep = endpoint.lower()
+    no_temp = ("openai_gpt5", "openai_o3", "o3")
+    return not any(ep.startswith(prefix) for prefix in no_temp)
 
 
 def _embedding_endpoint() -> str:
     return (os.getenv("EMBEDDING_ENDPOINT") or "databricks-gte-large-en").strip()
 
 
-def _call_llm(prompt: str, max_tokens: int = 16000, temperature: float | None = 0.0,
-              endpoint: str | None = None) -> str | None:
+_RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+_NON_RETRYABLE_HTTP_CODES = frozenset({400, 401, 403, 404})
+
+
+def _extract_status_code(exc: Exception) -> int | None:
+    for attr in ("status_code", "code"):
+        code = getattr(exc, attr, None)
+        if isinstance(code, int):
+            return code
+    m = re.search(r"\b([45]\d{2})\b", str(exc))
+    return int(m.group(1)) if m else None
+
+
+def _is_retryable(exc: Exception) -> bool:
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+    code = _extract_status_code(exc)
+    if code in _NON_RETRYABLE_HTTP_CODES:
+        return False
+    return code in _RETRYABLE_HTTP_CODES
+
+
+def _call_llm(prompt: str, max_tokens: int | None = None, temperature: float | None = 0.0,
+              endpoint: str | None = None, *, timeout_s: float = 90,
+              retries: int = 2) -> str | None:
     ep = (endpoint or _llm_endpoint()).strip()
     if not ep:
         return None
-    try:
+
+    backoff_delays = [2, 4]
+    wall_start = time.perf_counter()
+    max_attempts = retries + 1
+
+    def _do_call() -> str:
         wc = get_user_workspace_client()
         from databricks.sdk.service.serving import ChatMessage, ChatMessageRole
         kwargs: dict = {
             "name": ep,
             "messages": [ChatMessage(role=ChatMessageRole.USER, content=prompt)],
-            "max_tokens": max_tokens,
         }
-        if temperature is not None:
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
+        if temperature is not None and _supports_temperature(ep):
             kwargs["temperature"] = temperature
         resp = wc.serving_endpoints.query(**kwargs)
         return resp.choices[0].message.content.strip()
-    except Exception as e:
-        log.warning("LLM call failed (%s): %s", ep, e)
-        return None
+
+    last_exc: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            result_holder: dict[str, str] = {}
+            error_holder: dict[str, Exception] = {}
+            finished = threading.Event()
+            def _worker() -> None:
+                try:
+                    result_holder["value"] = _do_call()
+                except Exception as exc:  # noqa: BLE001
+                    error_holder["exc"] = exc
+                finally:
+                    finished.set()
+            worker = threading.Thread(
+                target=_worker,
+                daemon=True,
+                name=f"llm-call-{ep}",
+            )
+            worker.start()
+            if not finished.wait(timeout_s):
+                raise TimeoutError(f"LLM call to {ep} timed out after {timeout_s}s")
+            if "exc" in error_holder:
+                raise error_holder["exc"]
+            result = result_holder.get("value", "").strip()
+            elapsed = time.perf_counter() - wall_start
+            log.info("LLM call ok (%s) attempt=%d wall=%.1fs", ep, attempt, elapsed)
+            return result
+        except TimeoutError as exc:
+            elapsed = time.perf_counter() - wall_start
+            last_exc = exc
+            log.warning("LLM call timeout (%s) attempt=%d/%.0fs wall=%.1fs",
+                        ep, attempt, timeout_s, elapsed)
+        except Exception as e:
+            elapsed = time.perf_counter() - wall_start
+            last_exc = e
+            if not _is_retryable(e):
+                code = _extract_status_code(e)
+                log.warning("LLM non-retryable error (%s) status=%s wall=%.1fs: %s",
+                            ep, code, elapsed, e)
+                return None
+            log.warning("LLM call failed (%s) attempt=%d wall=%.1fs: %s",
+                        ep, attempt, elapsed, e)
+
+        if attempt < max_attempts:
+            delay = backoff_delays[min(attempt - 1, len(backoff_delays) - 1)]
+            log.info("Retrying LLM call (%s) in %ds...", ep, delay)
+            time.sleep(delay)
+
+    elapsed = time.perf_counter() - wall_start
+    log.warning("LLM call exhausted %d attempts (%s) wall=%.1fs: %s",
+                max_attempts, ep, elapsed, last_exc)
+    return None
 
 
 # ============================================================================
@@ -419,6 +508,196 @@ def _load_contract(oem: str, kb_id: str):
 
 _PROFILE_CACHE: dict[tuple[str, str], dict[str, Any]] = {}
 
+_HIGH_IMPACT_PROFILE_DEFAULTS: dict[str, Any] = {
+    "reference_market": [],
+    "export_markets": [],
+    "market_definitions": {},
+    "warranty_periods": [],
+    "key_terms": {},
+    "exclusions": [],
+    "claim_procedures": {},
+}
+
+
+def _select_profile_excerpts(
+    rows: list[dict[str, Any]],
+    bm25: _BM25,
+) -> list[dict[str, Any]]:
+    """Select the excerpts used to build the structured contract profile."""
+    chunk_ids: set[int] = set()
+    for i in range(min(15, len(rows))):
+        chunk_ids.add(i)
+
+    profile_queries = [
+        "reference market home market domestic market",
+        "export market foreign market overseas",
+        "warranty period duration months mileage kilometers",
+        "labour rate labor rate workshop rate",
+        "paint warranty corrosion warranty body warranty",
+        "powertrain engine transmission drivetrain warranty",
+        "definitions terms glossary",
+        "exclusions excluded not covered limitations",
+        "claim submission procedure process approval",
+        "battery warranty electric vehicle EV hybrid",
+        "goodwill gesture commercial discretion kulanz",
+        "pre-delivery inspection PDI",
+    ]
+    for pq in profile_queries:
+        for doc_id, _ in bm25.topk(pq, k=8):
+            chunk_ids.add(doc_id)
+            if len(chunk_ids) >= 80:
+                break
+
+    selected = sorted(chunk_ids)
+    excerpts: list[dict[str, Any]] = []
+    citation = 1
+    for cid in selected:
+        row = rows[cid]
+        text = (row.get("text") or "").strip()[:1200]
+        if not text:
+            continue
+        excerpts.append({
+            "citation": citation,
+            "doc_id": int(cid),
+            "source_path": row.get("source_path"),
+            "element_pos": row.get("element_pos"),
+            "chunk_idx": row.get("chunk_idx"),
+            "text": text,
+            "text_preview": text[:240],
+        })
+        citation += 1
+    return excerpts
+
+
+def _coerce_citation_numbers(value: Any) -> list[int]:
+    if value is None:
+        return []
+    seq = value if isinstance(value, list) else [value]
+    numbers: list[int] = []
+    for item in seq:
+        if isinstance(item, int):
+            numbers.append(item)
+        elif isinstance(item, str):
+            numbers.extend(int(tok) for tok in re.findall(r"\d+", item))
+    return sorted({n for n in numbers if n > 0})
+
+
+def _extract_grounding_terms(field: str, value: Any) -> list[str]:
+    """Extract key terms from a profile field value for citation text matching."""
+    terms: list[str] = []
+    if value is None:
+        return terms
+    if field in ("reference_market", "export_markets"):
+        for v in (value if isinstance(value, list) else [value]):
+            s = str(v).strip()
+            if len(s) >= 2:
+                terms.append(s.lower())
+    elif field == "warranty_periods":
+        for wp in (value if isinstance(value, list) else []):
+            if isinstance(wp, dict):
+                for num_key in ("months", "mileage"):
+                    n = wp.get(num_key)
+                    if n is not None:
+                        terms.append(str(n))
+    elif field in ("market_definitions", "key_terms", "claim_procedures"):
+        d = value if isinstance(value, dict) else {}
+        for k, v in d.items():
+            if isinstance(k, str) and len(k) >= 2:
+                terms.append(k.lower())
+            if isinstance(v, str):
+                for word in re.findall(r"[a-zA-ZäöüÄÖÜß]{4,}", v):
+                    terms.append(word.lower())
+    elif field == "exclusions":
+        for exc in (value if isinstance(value, list) else []):
+            if isinstance(exc, str):
+                for word in re.findall(r"[a-zA-ZäöüÄÖÜß]{4,}", exc):
+                    terms.append(word.lower())
+    return terms
+
+
+def _any_term_in_texts(terms: list[str], texts: list[str]) -> bool:
+    """Check if any term appears as a substring in any text (case-insensitive)."""
+    if not terms or not texts:
+        return False
+    combined = " ".join(texts).lower()
+    return any(term in combined for term in terms)
+
+
+def _ground_contract_profile(profile: dict[str, Any]) -> dict[str, Any]:
+    """Keep only citation-backed high-impact profile fields for reuse.
+
+    Verifies that extracted field values are actually supported by cited
+    passage text using substring matching on key terms.
+    """
+    grounded = dict(profile or {})
+    citation_map = grounded.get("citations")
+    if not isinstance(citation_map, dict):
+        citation_map = {}
+    grounding_rows = grounded.get("_profile_grounding")
+    valid_citations = {
+        int(row.get("citation"))
+        for row in grounding_rows
+        if isinstance(row, dict) and isinstance(row.get("citation"), int)
+    } if isinstance(grounding_rows, list) else set()
+
+    citation_texts: dict[int, str] = {}
+    if isinstance(grounding_rows, list):
+        for row in grounding_rows:
+            if not isinstance(row, dict):
+                continue
+            cit = row.get("citation")
+            if not isinstance(cit, int):
+                continue
+            text = row.get("text") or row.get("text_preview") or ""
+            if text:
+                citation_texts[cit] = str(text)
+    has_text_data = bool(citation_texts)
+
+    def _reset_field(field: str, default: Any):
+        if isinstance(default, list):
+            grounded[field] = list(default)
+        elif isinstance(default, dict):
+            grounded[field] = dict(default)
+        else:
+            grounded[field] = default
+
+    verification: dict[str, dict[str, Any]] = {}
+    for field, default in _HIGH_IMPACT_PROFILE_DEFAULTS.items():
+        citations = _coerce_citation_numbers(citation_map.get(field))
+        if valid_citations:
+            citations = [n for n in citations if n in valid_citations]
+
+        if not citations:
+            verification[field] = {
+                "supported": False,
+                "citations": [],
+                "grounding_method": "citation_index_only",
+            }
+            _reset_field(field, default)
+            continue
+
+        if has_text_data:
+            cited_texts = [citation_texts[c] for c in citations if c in citation_texts]
+            field_value = grounded.get(field)
+            terms = _extract_grounding_terms(field, field_value)
+            text_supported = _any_term_in_texts(terms, cited_texts) if terms else True
+            verification[field] = {
+                "supported": text_supported,
+                "citations": citations,
+                "grounding_method": "citation_text_match",
+            }
+            if not text_supported:
+                _reset_field(field, default)
+        else:
+            verification[field] = {
+                "supported": True,
+                "citations": citations,
+                "grounding_method": "citation_index_only",
+            }
+
+    grounded["verification"] = verification
+    return grounded
+
 _PROFILE_PROMPT = """You are a warranty contract analyst. Analyze the following contract excerpts and extract structured metadata.
 
 Return ONLY valid JSON matching this schema (no markdown, no explanation):
@@ -452,7 +731,12 @@ Return ONLY valid JSON matching this schema (no markdown, no explanation):
   }},
   "citations": {{
     "reference_market": [1, 5],
-    "warranty_periods": [3, 7, 12]
+    "export_markets": [2, 6],
+    "market_definitions": [1, 2],
+    "warranty_periods": [3, 7, 12],
+    "key_terms": [4, 9],
+    "exclusions": [6, 10],
+    "claim_procedures": [11]
   }}
 }}
 
@@ -479,46 +763,16 @@ def _extract_contract_profile(
         _PROFILE_CACHE[key] = persisted
         return persisted
 
-    # Gather intro chunks (first 15 -- contracts front-load definitions)
-    chunk_ids: set[int] = set()
-    for i in range(min(15, len(rows))):
-        chunk_ids.add(i)
-
-    # Expanded profile queries for thorough extraction
-    profile_queries = [
-        "reference market home market domestic market",
-        "export market foreign market overseas",
-        "warranty period duration months mileage kilometers",
-        "labour rate labor rate workshop rate",
-        "paint warranty corrosion warranty body warranty",
-        "powertrain engine transmission drivetrain warranty",
-        "definitions terms glossary",
-        "exclusions excluded not covered limitations",
-        "claim submission procedure process approval",
-        "battery warranty electric vehicle EV hybrid",
-        "goodwill gesture commercial discretion kulanz",
-        "pre-delivery inspection PDI",
-    ]
-    for pq in profile_queries:
-        for doc_id, _ in bm25.topk(pq, k=8):
-            chunk_ids.add(doc_id)
-            if len(chunk_ids) >= 80:
-                break
-
-    selected = sorted(chunk_ids)
-    numbered_chunks = []
-    for i, cid in enumerate(selected, 1):
-        txt = (rows[cid].get("text") or "").strip()[:1200]
-        if txt:
-            numbered_chunks.append(f"[{i}] {txt}")
-
-    context = "\n\n".join(numbered_chunks)
+    excerpts = _select_profile_excerpts(rows, bm25)
+    context = "\n\n".join(f"[{ex['citation']}] {ex['text']}" for ex in excerpts)
     prompt = _PROFILE_PROMPT.format(context=context)
 
     # Use Claude Opus for profile extraction (strongest model)
     raw = _call_llm(prompt, temperature=0.0)
     if not raw:
         profile: dict[str, Any] = {"oem": oem, "_status": "extraction_failed"}
+        profile["_profile_grounding"] = [dict(ex) for ex in excerpts]
+        profile = _ground_contract_profile(profile)
         _PROFILE_CACHE[key] = profile
         return profile
 
@@ -532,9 +786,12 @@ def _extract_contract_profile(
     except json.JSONDecodeError:
         profile = {"oem": oem, "_status": "parse_failed", "_raw": raw[:500]}
 
+    profile_status = profile.get("_status", "ok")
     profile.setdefault("oem", oem)
     profile["_kb_id"] = kb_id
-    profile["_status"] = "ok"
+    profile["_status"] = profile_status
+    profile["_profile_grounding"] = [dict(ex) for ex in excerpts]
+    profile = _ground_contract_profile(profile)
     _PROFILE_CACHE[key] = profile
     _persist_profile(oem, kb_id, profile)
     return profile
@@ -563,27 +820,45 @@ def _load_persisted_profile(oem: str, kb_id: str) -> dict[str, Any] | None:
     try:
         wc = get_user_workspace_client()
         raw = _read_volume_file(wc, path).decode("utf-8", errors="ignore")
-        return json.loads(raw)
+        return _ground_contract_profile(json.loads(raw))
     except Exception:
         return None
+
+
+def _persist_retrieval_trace(session_id: str, trace: dict[str, Any]):
+    """Persist retrieval trace to session volume for auditability."""
+    if not session_id:
+        return
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    path = (
+        f"/Volumes/mdna_dev/warranty_agent_staging/user_sessions"
+        f"/{session_id}/retrieval_traces/{ts}.json"
+    )
+    try:
+        wc = get_user_workspace_client()
+        import io
+        data = json.dumps(trace, indent=2, ensure_ascii=False, default=str).encode("utf-8")
+        wc.files.upload(path, io.BytesIO(data), overwrite=True)
+        log.debug("Persisted retrieval trace to %s", path)
+    except Exception as e:
+        log.debug("Could not persist retrieval trace (non-fatal): %s", e)
 
 
 # ============================================================================
 # Context formatting
 # ============================================================================
 
-def _format_context(
+def _materialize_snippets(
     rows: list[dict[str, Any]],
     hits: list[tuple[int, float]],
     k: int,
     per_chars: int = 2000,
-) -> tuple[str, str]:
-    """Format retrieved hits into numbered context snippets.
+) -> list[dict[str, Any]]:
+    """Convert retrieval hits into numbered snippet records.
 
     per_chars=2000 gives the LLM fuller passages for more accurate answers.
     """
-    snippets = []
-    sources = []
+    snippets: list[dict[str, Any]] = []
     used = set()
     n = 1
     for doc_id, _score in hits:
@@ -597,14 +872,34 @@ def _format_context(
         if len(txt) < 40 and not any(c.isdigit() for c in txt):
             continue
         used.add(dedup_key)
-        snippets.append(f"[{n}] {txt[:per_chars]}")
-        sources.append(
-            f"[{n}] {r.get('source_path')} (pos={r.get('element_pos')}, chunk={r.get('chunk_idx')})"
-        )
+        snippets.append({
+            "citation": n,
+            "doc_id": int(doc_id),
+            "score": round(float(_score), 6),
+            "text": txt[:per_chars],
+            "source_path": r.get("source_path"),
+            "element_pos": r.get("element_pos"),
+            "chunk_idx": r.get("chunk_idx"),
+        })
         n += 1
         if n > k:
             break
-    return "\n\n".join(snippets), "\n".join(sources)
+    return snippets
+
+
+def _format_context(
+    rows: list[dict[str, Any]],
+    hits: list[tuple[int, float]],
+    k: int,
+    per_chars: int = 2000,
+) -> tuple[str, str]:
+    snippets = _materialize_snippets(rows, hits, k=k, per_chars=per_chars)
+    context = "\n\n".join(f"[{s['citation']}] {s['text']}" for s in snippets)
+    sources = "\n".join(
+        f"[{s['citation']}] {s.get('source_path')} (pos={s.get('element_pos')}, chunk={s.get('chunk_idx')})"
+        for s in snippets
+    )
+    return context, sources
 
 
 # ============================================================================
@@ -616,6 +911,8 @@ def _rerank_snippets(
     rows: list[dict[str, Any]],
     hits: list[tuple[int, float]],
     top_k: int = 20,
+    *,
+    timeout_s: float = 45,
 ) -> list[tuple[int, float]]:
     """LLM-based semantic reranking.
 
@@ -625,7 +922,7 @@ def _rerank_snippets(
     if len(hits) <= top_k:
         return hits[:top_k]
 
-    rerank_pool = min(120, len(hits))
+    rerank_pool = min(max(top_k * 2, 40), 60, len(hits))
     candidates = []
     for doc_id, score in hits[:rerank_pool]:
         txt = (rows[doc_id].get("text") or "")[:600]
@@ -647,7 +944,7 @@ def _rerank_snippets(
         f"Return ONLY the JSON array, no explanation.\n\n{numbered}"
     )
 
-    text = _call_llm(prompt, temperature=0.0)
+    text = _call_llm(prompt, temperature=0.0, timeout_s=timeout_s, retries=1)
     if text:
         indices = []
         for tok in re.findall(r"\d+", text):
@@ -834,12 +1131,18 @@ def retrieve_contract_context(
     if not oem or not contract_id or not question:
         raise ValueError("oem, contract_id, and question are required")
 
+    total_start = time.perf_counter()
+    retrieval_timeout = int(os.getenv("RETRIEVAL_TIMEOUT_S", "180"))
+
+    load_start = time.perf_counter()
     _load_contract(oem, contract_id)
+    timings_ms: dict[str, int] = {"load_contract": int((time.perf_counter() - load_start) * 1000)}
     bm25: _BM25 = _CACHE[(oem, contract_id)]["bm25"]
     rows: list[dict[str, Any]] = _CACHE[(oem, contract_id)]["rows"]
     embeddings: list[list[float]] | None = _CACHE[(oem, contract_id)].get("embeddings")
 
     # --- Load profile (non-blocking) ---
+    profile_start = time.perf_counter()
     profile_key = (oem, contract_id)
     profile = _PROFILE_CACHE.get(profile_key)
     if profile is None:
@@ -847,6 +1150,9 @@ def retrieve_contract_context(
         if persisted:
             _PROFILE_CACHE[profile_key] = persisted
             profile = persisted
+    if profile:
+        profile = _ground_contract_profile(profile)
+    timings_ms["profile_lookup"] = int((time.perf_counter() - profile_start) * 1000)
 
     # --- Detect contract language ---
     if profile_key not in _CONTRACT_LANG_CACHE:
@@ -854,16 +1160,21 @@ def retrieve_contract_context(
     contract_lang = _CONTRACT_LANG_CACHE[profile_key]
 
     # --- Build expanded query set ---
+    expand_start = time.perf_counter()
     queries = _expand_query(question, profile)
     if contract_lang != "en":
         translated_q = _translate_query(question, contract_lang)
         if translated_q:
             queries.append(translated_q)
             queries.extend(_expand_query(translated_q, profile)[1:])
+    timings_ms["query_expand"] = int((time.perf_counter() - expand_start) * 1000)
 
     # --- Hybrid retrieval (BM25 + multi-query vector) ---
+    retrieve_start = time.perf_counter()
     hits = _hybrid_retrieve(bm25, embeddings, queries, question, k=int(k))
     retrieval_mode = "hybrid" if embeddings else "bm25"
+    candidate_count = len(hits)
+    timings_ms["retrieve"] = int((time.perf_counter() - retrieve_start) * 1000)
 
     log.info(
         "%s retrieval: %d queries, %d candidates (lang=%s, profile=%s)",
@@ -871,22 +1182,94 @@ def retrieve_contract_context(
         "yes" if profile and profile.get("_status") == "ok" else "no",
     )
 
+    elapsed_s = time.perf_counter() - total_start
+    if elapsed_s > retrieval_timeout:
+        timings_ms["total"] = int(elapsed_s * 1000)
+        log.error("RETRIEVAL_TIMEOUT: %s/%s exceeded %ds after retrieval (wall=%dms)",
+                  oem, contract_id, retrieval_timeout, timings_ms["total"])
+        log.info("RETRIEVAL_TIMING: %s/%s %s", oem, contract_id, json.dumps(timings_ms))
+        return {
+            "context": "", "sources": "", "retrieved": 0,
+            "retrieval_mode": "timeout",
+            "note": f"Retrieval timed out after {retrieval_timeout}s for {oem}/{contract_id}.",
+            "retrieval_trace": {"timings_ms": timings_ms},
+        }
+
     if not hits:
+        timings_ms["total"] = int((time.perf_counter() - total_start) * 1000)
+        log.info("RETRIEVAL_TIMING: %s/%s %s", oem, contract_id, json.dumps(timings_ms))
         return {
             "context": "", "sources": "", "retrieved": 0,
             "retrieval_mode": retrieval_mode,
             "note": "No matching passages found in the contract.",
+            "retrieval_trace": {
+                "query_count": len(queries),
+                "queries": queries[:5],
+                "candidate_count": 0,
+                "returned_count": 0,
+                "timings_ms": timings_ms,
+                "profile_verification": (profile or {}).get("verification", {}),
+            },
         }
 
-    # --- Semantic reranking (Claude Opus) ---
-    hits = _rerank_snippets(question, rows, hits, top_k=int(k))
+    # --- Semantic reranking (best-effort, bounded by remaining budget) ---
+    elapsed_s = time.perf_counter() - total_start
+    remaining_budget_s = retrieval_timeout - elapsed_s
+    timings_ms["rerank_budget_ms"] = max(0, int(remaining_budget_s * 1000))
+    rerank_start = time.perf_counter()
+    if remaining_budget_s <= 15:
+        timings_ms["rerank"] = 0
+        log.warning(
+            "Skipping rerank for %s/%s due to low remaining retrieval budget (%.1fs)",
+            oem, contract_id, remaining_budget_s,
+        )
+    else:
+        rerank_timeout_s = max(15.0, min(45.0, remaining_budget_s - 5.0))
+        hits = _rerank_snippets(
+            question,
+            rows,
+            hits,
+            top_k=int(k),
+            timeout_s=rerank_timeout_s,
+        )
+        timings_ms["rerank"] = int((time.perf_counter() - rerank_start) * 1000)
+    elapsed_s = time.perf_counter() - total_start
+    if elapsed_s > retrieval_timeout:
+        timings_ms["total"] = int(elapsed_s * 1000)
+        log.error("RETRIEVAL_TIMEOUT: %s/%s exceeded %ds after reranking (wall=%dms)",
+                  oem, contract_id, retrieval_timeout, timings_ms["total"])
+        log.info("RETRIEVAL_TIMING: %s/%s %s", oem, contract_id, json.dumps(timings_ms))
+        return {
+            "context": "", "sources": "", "retrieved": 0,
+            "retrieval_mode": "timeout",
+            "note": f"Retrieval timed out after {retrieval_timeout}s for {oem}/{contract_id}.",
+            "retrieval_trace": {"timings_ms": timings_ms},
+        }
+
+    format_start = time.perf_counter()
     ctx, srcs = _format_context(rows, hits, k=int(k))
+    snippets = _materialize_snippets(rows, hits, k=int(k), per_chars=2000)
+    timings_ms["format"] = int((time.perf_counter() - format_start) * 1000)
+
+    timings_ms["total"] = int((time.perf_counter() - total_start) * 1000)
 
     result: dict[str, Any] = {
         "context": ctx,
         "sources": srcs,
         "retrieved": len(hits),
         "retrieval_mode": retrieval_mode,
+        "retrieval_trace": {
+            "query_count": len(queries),
+            "queries": queries[:5],
+            "candidate_count": candidate_count,
+            "returned_count": len(snippets),
+            "timings_ms": timings_ms,
+            "profile_verification": (profile or {}).get("verification", {}),
+            "snippets": [
+                {k: v for k, v in snippet.items() if k != "text"}
+                for snippet in snippets[:8]
+            ],
+        },
     }
 
     if profile and profile.get("_status") == "ok":
@@ -909,6 +1292,24 @@ def retrieve_contract_context(
         if summary_parts:
             result["profile_summary"] = "\n".join(summary_parts)
 
+    log.info("RETRIEVAL_TIMING: %s/%s %s", oem, contract_id, json.dumps(timings_ms))
+
+    sid = _CURRENT_SESSION_ID
+    if sid and result.get("retrieval_trace"):
+        trace_to_persist = dict(result["retrieval_trace"])
+        trace_to_persist["query"] = question
+        trace_to_persist["expanded_queries"] = queries
+        trace_to_persist["oem"] = oem
+        trace_to_persist["contract_id"] = contract_id
+        trace_to_persist["rerank_performed"] = timings_ms.get("rerank", 0) > 0
+        trace_to_persist["snippet_ids"] = [
+            s.get("doc_id") or s.get("chunk_idx")
+            for s in trace_to_persist.get("snippets", [])
+        ]
+        trace_to_persist.pop("snippets", None)
+        trace_to_persist["timestamp"] = datetime.now().isoformat()
+        _persist_retrieval_trace(sid, trace_to_persist)
+
     return result
 
 
@@ -928,7 +1329,7 @@ def create_agent(
     mcp_servers: list[McpServer] | None = None,
     selected_contracts: list[dict[str, str]] | None = None,
 ) -> Agent:
-    llm = os.getenv("LLM_ENDPOINT", "gpt_41")
+    llm = os.getenv("LLM_ENDPOINT", "databricks-claude-opus-4-6")
 
     contract_context_block = ""
     if selected_contracts and len(selected_contracts) > 1:
@@ -970,10 +1371,26 @@ def create_agent(
             "- Cross-reference profile data with retrieved passages for consistency.\n"
             "- If profile and passages conflict, quote both and note the discrepancy.\n\n"
             "If oem/contract_id are missing, ask the user to provide them.\n\n"
-            "Output exactly two sections:\n"
-            "Evidence: 3-10 bullet points quoting key phrases from Context; each ends with [n].\n"
-            "Answer: thorough answer where every claim includes at least one [n] citation.\n"
-            "If the answer is not present: say 'Not found in provided documents.'\n"
+            "OUTPUT FORMAT (GitHub-flavored Markdown):\n"
+            "Always respond in well-structured Markdown. Use ## headings, **bold**, "
+            "bullet lists, and GFM pipe tables. The UI renders Markdown natively.\n\n"
+            "Required sections:\n"
+            "## Evidence\n"
+            "3-10 bullet points quoting key phrases from Context. "
+            "Each bullet ends with an inline citation [n].\n\n"
+            "## Answer\n"
+            "Thorough answer where every factual claim includes at least one [n] citation. "
+            "Use sub-headings (###), bold, and bullet lists for clarity.\n\n"
+            "## Comparison (only when the question compares contracts or topics)\n"
+            "Use a Markdown pipe table when comparing 2-4 dimensions across contracts. "
+            "Keep tables to 5 columns or fewer. If the comparison is too wide or "
+            "nuanced for a clean table, use labeled bullet sections instead.\n\n"
+            "If the answer is not present: say 'Not found in provided documents.'\n\n"
+            "OUTPUT HYGIENE:\n"
+            "- Never include your thinking, reasoning, or chain-of-thought in the response.\n"
+            "- Never echo tool call names, parameters, or raw tool outputs.\n"
+            "- The response must contain only the final answer with citations.\n"
+            "- Do not wrap any part of your answer in <thinking>, <think>, <scratchpad>, or similar tags.\n"
         ),
         model=llm,
         model_settings=ModelSettings(),
@@ -995,8 +1412,11 @@ def _extract_selected_contracts(request: ResponsesAgentRequest) -> list[dict[str
 
 @invoke()
 async def invoke_handler(request: ResponsesAgentRequest) -> ResponsesAgentResponse:
-    if session_id := get_session_id(request):
+    global _CURRENT_SESSION_ID
+    session_id = get_session_id(request)
+    if session_id:
         mlflow.update_current_trace(metadata={"mlflow.trace.session": session_id})
+    _CURRENT_SESSION_ID = session_id or None
     contracts = _extract_selected_contracts(request)
     agent = create_agent(selected_contracts=contracts)
     messages = [i.model_dump() for i in request.input]
@@ -1008,8 +1428,11 @@ async def invoke_handler(request: ResponsesAgentRequest) -> ResponsesAgentRespon
 async def stream_handler(
     request: ResponsesAgentRequest,
 ) -> AsyncGenerator[ResponsesAgentStreamEvent, None]:
-    if session_id := get_session_id(request):
+    global _CURRENT_SESSION_ID
+    session_id = get_session_id(request)
+    if session_id:
         mlflow.update_current_trace(metadata={"mlflow.trace.session": session_id})
+    _CURRENT_SESSION_ID = session_id or None
     contracts = _extract_selected_contracts(request)
     agent = create_agent(selected_contracts=contracts)
     messages = [i.model_dump() for i in request.input]

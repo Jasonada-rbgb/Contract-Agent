@@ -44,6 +44,12 @@ desktop.ini
 # AI artifacts (keep structure, ignore large files)
 ai/screenshots/*.png
 ai/screenshots/*.jpg
+ai/orchestrator/checkpoints/*/*.json
+ai/orchestrator/runs/*/events.jsonl
+ai/orchestrator/runs/*/final-report.json
+ai/orchestrator/runs/*/manifest.md
+!ai/orchestrator/checkpoints/.gitkeep
+!ai/orchestrator/runs/.gitkeep
 
 # PDF contract files (large, stored in Databricks Volumes)
 *.pdf

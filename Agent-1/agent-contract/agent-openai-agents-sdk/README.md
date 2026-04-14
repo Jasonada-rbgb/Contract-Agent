@@ -91,6 +91,17 @@ databricks apps deploy agent-contract --source-code-path "/Workspace/Users/<you>
 uv run agent-evaluate
 ```
 
+### Multi-Agent Orchestrator (Repo Root)
+
+From `c:\Users\ADJ1DE\Documents\Agent Workflow`:
+
+```powershell
+py -m ai.orchestrator.run --task "<feedback_id|prompt>" --root "Agent-1/agent-contract/agent-openai-agents-sdk"
+py -m ai.orchestrator.resume --run-id "<run_id>"
+py -m ai.orchestrator.status --run-id "<run_id>"
+py -m ai.orchestrator.memory --query "<text>"
+```
+
 ## Environment Variables
 
 Configured in `app.yaml`:

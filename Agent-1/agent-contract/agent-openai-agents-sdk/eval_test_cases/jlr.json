@@ -1,0 +1,285 @@
+[
+  {
+    "id": "jlr_warranty_periods",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "What are the warranty periods for this contract? List all distinct durations and what they apply to.",
+    "expected_facts": [
+      "4 years or 50,000 miles",
+      "3 years or 60,000 miles",
+      "24 months from date of retail sale of the Service Part",
+      "12 months or 12,000 miles whichever is sooner"
+    ],
+    "must_not_contain": []
+  },
+  {
+    "id": "jlr_powertrain_warranty",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "What warranty coverage applies specifically to powertrain components such as engines, transmissions, and drivetrain parts under the JLR contract?",
+    "expected_facts": [
+      "powertrain or engine or transmission or drivetrain",
+      "warranty period or coverage",
+      "miles or mileage or kilometres"
+    ],
+    "must_not_contain": [
+      "Pauschalfaktoren",
+      "Hochvoltspeicher",
+      "I-Stufe"
+    ]
+  },
+  {
+    "id": "jlr_paint_warranty",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "Is there specific warranty coverage for paint defects, surface finish, or cosmetic issues under the JLR contract? What are the terms?",
+    "expected_facts": [
+      "paint or surface or cosmetic or finish or appearance",
+      "defect or failure or fault",
+      "warranty or coverage or period"
+    ],
+    "must_not_contain": [
+      "Pauschalfaktoren",
+      "Gutschriftsjahr",
+      "Spätausfall"
+    ]
+  },
+  {
+    "id": "jlr_corrosion_warranty",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "What warranty coverage exists for corrosion-related defects under the JLR contract? Are there separate terms or durations for corrosion versus other defects?",
+    "expected_facts": [
+      "corrosion or rust or perforation",
+      "warranty or coverage or period",
+      "years or months or duration"
+    ],
+    "must_not_contain": [
+      "Pauschalfaktoren",
+      "I-Stufe",
+      "EUR 50,000,000"
+    ]
+  },
+  {
+    "id": "jlr_battery_ev_warranty",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "What warranty terms apply to electric vehicle batteries or high-voltage battery components under the JLR contract? Is there a separate warranty period for EV batteries?",
+    "expected_facts": [
+      "battery or high-voltage or EV or electric",
+      "warranty or coverage or period",
+      "years or months or miles"
+    ],
+    "must_not_contain": [
+      "Hochvoltspeicher",
+      "96 months",
+      "160,000 km",
+      "01.01.2022"
+    ]
+  },
+  {
+    "id": "jlr_market_definitions",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "How does JLR define reference market versus export market? What are the implications for warranty coverage in each?",
+    "expected_facts": [
+      "reference market",
+      "export market",
+      "United Kingdom or UK",
+      "warranty coverage or warranty period"
+    ],
+    "must_not_contain": [
+      "Pauschalfaktoren",
+      "Gutschriftsjahr",
+      "EUR 50,000,000",
+      "Spätausfall"
+    ]
+  },
+  {
+    "id": "jlr_regional_coverage_differences",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "Are there different warranty durations or coverage levels depending on the region or country where the vehicle is sold under the JLR contract? How does coverage in the UK compare to other markets?",
+    "expected_facts": [
+      "market or region or country",
+      "UK or United Kingdom or reference",
+      "export or international",
+      "warranty or coverage"
+    ],
+    "must_not_contain": [
+      "USA/Canada/Puerto Rico",
+      "Pauschalfaktoren",
+      "EUR 50,000,000"
+    ]
+  },
+  {
+    "id": "jlr_exclusions",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "What types of failures or damage are excluded from warranty coverage under the JLR contract?",
+    "expected_facts": [
+      "misuse or abuse",
+      "wear and tear or normal wear",
+      "unauthorised modification or alteration",
+      "failure to follow maintenance or service"
+    ],
+    "must_not_contain": [
+      "Pauschalfaktoren",
+      "Hochvoltspeicher",
+      "I-Stufe",
+      "Gutschriftsjahr"
+    ]
+  },
+  {
+    "id": "jlr_limitation_of_liability",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "Does the JLR contract include any limitation of liability, liability caps, or maximum financial exposure for the supplier? What are the terms?",
+    "expected_facts": [
+      "liability or limitation or cap or indemnity",
+      "supplier or Bosch",
+      "defect or claim or cost"
+    ],
+    "must_not_contain": [
+      "EUR 50,000,000",
+      "Gutschriftsjahr",
+      "Pauschalfaktoren"
+    ]
+  },
+  {
+    "id": "jlr_consequential_damages",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "What does the JLR contract say about consequential damages, recall costs, or indirect losses? Is the supplier liable for these?",
+    "expected_facts": [
+      "consequential or indirect or recall",
+      "damage or loss or cost",
+      "liability or responsible or obligation"
+    ],
+    "must_not_contain": [
+      "Pauschalfaktoren",
+      "Spätausfall",
+      "Wiederbeschaffungskosten"
+    ]
+  },
+  {
+    "id": "jlr_claim_procedures",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "What is the process for submitting a warranty claim under the JLR contract? What documentation or notification is required?",
+    "expected_facts": [
+      "claim or warranty claim",
+      "notification or notify",
+      "defective part or failed part or sample",
+      "investigation or analysis"
+    ],
+    "must_not_contain": [
+      "Pauschalfaktoren",
+      "Wiederbeschaffungskosten",
+      "Aktionskosten",
+      "EUR 300,000"
+    ]
+  },
+  {
+    "id": "jlr_claim_timeframes",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "Are there specific time limits or deadlines for submitting warranty claims or providing notification of defects under the JLR contract?",
+    "expected_facts": [
+      "time or deadline or period or days",
+      "notification or notify or report",
+      "claim or defect"
+    ],
+    "must_not_contain": [
+      "Pauschalfaktoren",
+      "Spätausfall",
+      "I-Stufe"
+    ]
+  },
+  {
+    "id": "jlr_service_wear_parts",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "What warranty coverage applies to service parts and wear-and-tear items under the JLR contract? Are there different periods for these compared to standard production parts?",
+    "expected_facts": [
+      "service part or Service Part",
+      "24 months or 12 months",
+      "wear or wear-and-tear",
+      "retail sale or date of sale"
+    ],
+    "must_not_contain": [
+      "Pauschalfaktoren",
+      "Spätausfall",
+      "goodwill extension",
+      "months 37 through 60"
+    ]
+  },
+  {
+    "id": "jlr_cost_recovery",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "How does JLR recover warranty costs from the supplier? What cost components are included in the reimbursement calculation?",
+    "expected_facts": [
+      "cost or reimbursement or recovery or charge",
+      "supplier or Bosch",
+      "labour or parts or material or replacement"
+    ],
+    "must_not_contain": [
+      "Pauschalfaktoren",
+      "1.03 or 103%",
+      "3.20 or 320%",
+      "Wiederbeschaffungskosten"
+    ]
+  },
+  {
+    "id": "jlr_stress_test_scenario",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "A Bosch service part fails in a Jaguar vehicle in the UK at 30 months after retail sale with 40,000 miles on the odometer. The part is a standard service part, not a wear-and-tear item. Is this covered under warranty? Show your reasoning step by step.",
+    "expected_facts": [
+      "service part or Service Part",
+      "24 months",
+      "retail sale",
+      "within or outside or exceeded",
+      "mileage or miles"
+    ],
+    "must_not_contain": [
+      "goodwill extension",
+      "months 37 through 60",
+      "Spätausfall",
+      "in warranty under the standard 36-month period"
+    ]
+  },
+  {
+    "id": "jlr_stress_test_production_part",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "A Bosch production part (not a service part or wear item) fails in a Range Rover at 2 years and 45,000 miles in an export market. Is this within warranty? Explain your reasoning.",
+    "expected_facts": [
+      "production part or original equipment",
+      "years or months",
+      "miles or mileage",
+      "export market",
+      "within or outside or covered"
+    ],
+    "must_not_contain": [
+      "goodwill extension",
+      "Spätausfall",
+      "36-month"
+    ]
+  },
+  {
+    "id": "jlr_unanswerable_fabrication_check",
+    "oem": "JLR",
+    "contract_id": "JLR_Warranty",
+    "question": "What is the warranty coverage for spaceship propulsion systems under the JLR contract?",
+    "expected_facts": [
+      "not found"
+    ],
+    "must_not_contain": [
+      "4 years or 50,000 miles",
+      "3 years or 60,000 miles",
+      "24 months from date of retail sale of the Service Part"
+    ]
+  }
+]

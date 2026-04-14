@@ -1,8 +1,8 @@
 """Claims evaluation — all rulings derived from the contract via LLM reasoning.
 
-No hardcoded warranty rules. Every decision is made by a reasoning model
-(openai_o3) interpreting the actual contract terms, warranty periods,
-exclusions, and market definitions extracted from the ingested contract.
+No hardcoded warranty rules. Every decision is made by the configured
+reasoning model (REASONING_ENDPOINT) interpreting the actual contract terms,
+warranty periods, exclusions, and market definitions from the ingested contract.
 """
 
 import concurrent.futures
@@ -80,6 +80,7 @@ CANON_MAP: Dict[str, set] = {
         "in_service", "retail_sale_date", "sale_date",
         "erstzulassung", "erstzulassungsdatum", "garantiebeginn",
         "retail_date", "delivery_date", "fahrzeugubergabe",
+        "sale_date_event",
     },
     "repair_date": {
         "repair_date", "claim_date", "repair_dt", "date_of_repair",
@@ -94,7 +95,7 @@ CANON_MAP: Dict[str, set] = {
         "part_description", "part", "part_desc", "component",
         "fault_description", "defect", "repair_description",
         "teilebeschreibung", "bauteil", "fehlerbeschreibung",
-        "sachnummer_text", "part_name",
+        "sachnummer_text", "part_name", "bosch_part_description",
     },
     "claim_number": {
         "claim_number", "claim", "claim_no", "claim_id",
@@ -137,7 +138,7 @@ CANON_MAP: Dict[str, set] = {
     },
     "part_number": {
         "part_number", "part_no", "sachnummer", "teilenummer",
-        "material_number", "sn", "pn",
+        "material_number", "sn", "pn", "part_id",
     },
 }
 
@@ -230,41 +231,196 @@ def _smart_col_lookup(
 # ---------------------------------------------------------------------------
 
 def _reasoning_endpoint() -> str:
-    """Get the reasoning model endpoint (o3 preferred for multi-step logic)."""
+    """Get the reasoning model endpoint for multi-step claims logic."""
     return (
         os.getenv("REASONING_ENDPOINT")
         or os.getenv("LLM_ENDPOINT")
-        or "gpt_41"
+        or "databricks-claude-opus-4-6"
     ).strip()
 
 
 def _fast_endpoint() -> str:
-    """Get the fast model endpoint (Claude Opus for initial claim triage)."""
-    return (os.getenv("LLM_ENDPOINT") or "databricks-claude-opus-4-6").strip()
+    """Get the fast model endpoint for initial claim triage."""
+    return (os.getenv("LLM_ENDPOINT") or "gemini_25_flash").strip()
 
 
 # ---------------------------------------------------------------------------
 # Contract rule retrieval (cached per contract for the process lifetime)
 # ---------------------------------------------------------------------------
 
-_CONTRACT_CTX_CACHE: Dict[tuple, tuple[dict, str]] = {}
+_CONTRACT_CTX_CACHE: Dict[tuple, dict[str, Any]] = {}
 
 
-def _load_contract_context(
+_WARRANTY_TERMS_PROMPT = """You are a warranty contract analyst. Extract ALL warranty periods from the contract passages below.
+
+=== CONTRACT PASSAGES ===
+{passages}
+
+Return ONLY raw JSON (no markdown fences). Extract every distinct warranty period you find:
+{{
+  "warranty_periods": [
+    {{
+      "market": "market name or 'all'",
+      "component": "component type or 'general'",
+      "months": 48,
+      "mileage_limit": 50000,
+      "mileage_unit": "miles" or "km",
+      "whichever_sooner": true or false,
+      "citation": "brief quote from the passage"
+    }}
+  ],
+  "reference_market": ["country or region name"],
+  "export_markets": ["list of export market names or descriptions"],
+  "exclusions": ["list of exclusion categories found"],
+  "wear_and_tear_examples": ["list of parts classified as wear and tear"]
+}}
+
+Be exhaustive. Include general warranty, service parts, wear and tear,
+powertrain, paint, corrosion, battery, and any other category you find.
+If a value is not stated, omit that period entirely (do not guess)."""
+
+
+def _resolve_warranty_terms(
+    rows: list[dict[str, Any]],
+    bm25,
+    embeddings,
+    profile: dict[str, Any],
+    endpoint: str,
+) -> dict[str, Any]:
+    """Deep retrieval + LLM extraction of warranty terms from the contract.
+
+    Mirrors the Q&A mode's multi-query approach: broad retrieval with
+    reranking, then LLM extraction of structured warranty data.
+    Runs once per contract and is cached for all claims.
+    """
+    from agent_server.agent import (
+        _hybrid_retrieve, _expand_query, _format_context, _rerank_snippets,
+    )
+
+    term_queries = [
+        "warranty period duration months years mileage kilometres general production",
+        "warranty obligations goods service parts remain in force period of",
+        "years miles whichever sooner comes first warranty",
+        "reference market UK domestic home market warranty period",
+        "export market foreign international warranty period mileage",
+        "wear and tear parts limited warranty 12 months",
+        "service parts warranty period unlimited mileage",
+        "powertrain engine transmission drivetrain warranty coverage",
+        "paint corrosion perforation warranty body",
+        "battery warranty electric vehicle EV high voltage",
+        "exclusions not covered limitations exceptions",
+        "Section 1 Section 2 warranty obligations",
+        "new vehicle warranty manufacturer production warranty",
+        "K/F Europe rest of world warranty mileage",
+    ]
+
+    all_hits: dict[int, float] = {}
+    for query in term_queries:
+        expanded = _expand_query(query, profile)
+        hits = _hybrid_retrieve(bm25, embeddings, expanded, query, k=20)
+        for doc_id, score in hits:
+            if doc_id not in all_hits or score > all_hits[doc_id]:
+                all_hits[doc_id] = score
+
+    sorted_hits = sorted(all_hits.items(), key=lambda x: x[1], reverse=True)[:60]
+
+    try:
+        reranked = _rerank_snippets(
+            "warranty period months mileage market coverage exclusions",
+            rows, sorted_hits, top_k=30, timeout_s=45.0,
+        )
+        sorted_hits = reranked
+    except Exception as e:
+        log.warning("Reranking failed during warranty term resolution (non-fatal): %s", e)
+
+    passages_ctx, _ = _format_context(rows, sorted_hits, k=30, per_chars=2500)
+
+    prompt = _WARRANTY_TERMS_PROMPT.format(passages=passages_ctx)
+    from agent_server.agent import _call_llm
+    raw = _call_llm(prompt, max_tokens=4000, temperature=0.0, endpoint=endpoint)
+    if not raw:
+        log.warning("Warranty term resolution returned empty response")
+        return {}
+
+    raw_clean = raw.strip()
+    raw_clean = re.sub(r"^```(?:json)?\s*", "", raw_clean)
+    raw_clean = re.sub(r"\s*```\s*$", "", raw_clean)
+
+    brace_start = raw_clean.find("{")
+    if brace_start >= 0:
+        depth = 0
+        for i, ch in enumerate(raw_clean[brace_start:], brace_start):
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    raw_clean = raw_clean[brace_start:i + 1]
+                    break
+
+    try:
+        terms = json.loads(raw_clean)
+        wp_count = len(terms.get("warranty_periods", []))
+        log.info(
+            "Resolved %d warranty period(s) for contract via deep retrieval",
+            wp_count,
+        )
+        return terms
+    except json.JSONDecodeError as e:
+        log.warning("Could not parse warranty terms JSON: %s", e)
+        return {}
+
+
+def _enrich_profile_with_terms(
+    profile: dict[str, Any],
+    terms: dict[str, Any],
+) -> dict[str, Any]:
+    """Merge resolved warranty terms into the contract profile."""
+    profile = dict(profile)
+
+    resolved_periods = terms.get("warranty_periods", [])
+    existing_periods = profile.get("warranty_periods") or []
+
+    if resolved_periods:
+        existing_by_key = {
+            (wp.get("market", ""), wp.get("component", "")): wp
+            for wp in existing_periods
+        }
+        for wp in resolved_periods:
+            key = (wp.get("market", ""), wp.get("component", ""))
+            existing = existing_by_key.get(key, {})
+            if not existing.get("months") and wp.get("months"):
+                existing_by_key[key] = wp
+            elif wp.get("months"):
+                existing_by_key[key] = wp
+        profile["warranty_periods"] = list(existing_by_key.values())
+
+    if terms.get("reference_market") and not profile.get("reference_market"):
+        profile["reference_market"] = terms["reference_market"]
+    if terms.get("export_markets") and not profile.get("export_markets"):
+        profile["export_markets"] = terms["export_markets"]
+
+    profile["_terms_resolved"] = True
+    return profile
+
+
+def _load_contract_assets(
     oem: str, contract_id: str,
-) -> tuple[dict, str]:
-    """Load contract profile and retrieve comprehensive warranty rule passages.
+) -> dict[str, Any]:
+    """Load shared contract assets for row-aware claims retrieval.
 
+    Performs deep warranty term resolution (like Q&A mode) to extract
+    warranty periods, market definitions, and exclusions from the contract.
     Results are cached in-process so repeated evaluations against the same
-    contract skip the expensive 15-query retrieval entirely.
+    contract skip the expensive retrieval entirely.
     """
     cache_key = (oem, contract_id)
     if cache_key in _CONTRACT_CTX_CACHE:
-        log.info("Using cached contract context for %s/%s", oem, contract_id)
+        log.info("Using cached contract assets for %s/%s", oem, contract_id)
         return _CONTRACT_CTX_CACHE[cache_key]
 
     from agent_server.agent import (
-        _load_contract, _CACHE, _extract_contract_profile,
+        _load_contract, _CACHE, _extract_contract_profile, _ground_contract_profile,
         _hybrid_retrieve, _expand_query, _format_context,
     )
 
@@ -274,7 +430,19 @@ def _load_contract_context(
     bm25 = cache["bm25"]
     embeddings = cache.get("embeddings")
 
-    profile = _extract_contract_profile(oem, contract_id, rows, bm25)
+    profile = _ground_contract_profile(_extract_contract_profile(oem, contract_id, rows, bm25))
+
+    # Deep warranty term resolution -- same depth as Q&A mode
+    log.info("Resolving warranty terms via deep retrieval for %s/%s...", oem, contract_id)
+    endpoint = _reasoning_endpoint()
+    terms = _resolve_warranty_terms(rows, bm25, embeddings, profile, endpoint)
+    if terms:
+        profile = _enrich_profile_with_terms(profile, terms)
+        log.info(
+            "Profile enriched: %d warranty period(s), ref_market=%s",
+            len(profile.get("warranty_periods", [])),
+            profile.get("reference_market", "?"),
+        )
 
     rule_queries = [
         "warranty period duration months mileage general coverage",
@@ -303,14 +471,111 @@ def _load_contract_context(
                 all_hits[doc_id] = score
 
     sorted_hits = sorted(all_hits.items(), key=lambda x: x[1], reverse=True)[:50]
-    ctx, _ = _format_context(rows, sorted_hits, k=50, per_chars=2000)
+    ctx, _ = _format_context(rows, sorted_hits, k=25, per_chars=1800)
 
     log.info(
         "Retrieved %d comprehensive rule passages for %s/%s",
         len(sorted_hits), oem, contract_id,
     )
-    _CONTRACT_CTX_CACHE[cache_key] = (profile, ctx)
-    return profile, ctx
+    assets = {
+        "profile": profile,
+        "rows": rows,
+        "bm25": bm25,
+        "embeddings": embeddings,
+        "base_hits": sorted_hits,
+        "base_context": ctx,
+    }
+    _CONTRACT_CTX_CACHE[cache_key] = assets
+    return assets
+
+
+def _build_claim_retrieval_queries(claim_data: dict, profile: dict) -> list[str]:
+    """Build a small set of row-aware retrieval queries for one claim."""
+    queries: list[str] = []
+
+    def _add(text: str | None):
+        if not text:
+            return
+        compact = " ".join(str(text).split())
+        if compact and compact not in queries:
+            queries.append(compact[:140])
+
+    country = claim_data.get("country")
+    if country:
+        _add(f"market definition coverage for {country}")
+
+    part = claim_data.get("part_description")
+    if part:
+        _add(f"{part} warranty coverage exclusions")
+
+    mileage = claim_data.get("mileage")
+    if mileage is not None:
+        _add(f"mileage limit {mileage} whichever comes first")
+
+    if claim_data.get("repair_date") or claim_data.get("warranty_start_date"):
+        _add("warranty start repair date calculation warranty end date")
+
+    if country:
+        _add(f"{country} export market reference market warranty")
+    if part:
+        _add(f"{part} wear part maintenance exclusion")
+
+    verification = profile.get("verification") or {}
+    unsupported = [field for field, meta in verification.items() if not meta.get("supported")]
+    if unsupported:
+        _add("explicit contract passages market definition warranty period exclusions")
+
+    return queries[:4]
+
+
+def _retrieve_claim_passages(
+    contract_assets: dict[str, Any],
+    claim_data: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    """Blend shared contract rules with row-targeted retrieval for one claim.
+
+    Uses the same retrieval depth as Q&A mode: expanded queries with
+    synonym expansion, and semantic reranking when available.
+    """
+    from agent_server.agent import (
+        _expand_query, _format_context, _hybrid_retrieve, _rerank_snippets,
+    )
+
+    rows = contract_assets["rows"]
+    bm25 = contract_assets["bm25"]
+    embeddings = contract_assets.get("embeddings")
+    profile = contract_assets["profile"]
+    combined_hits: dict[int, float] = {
+        int(doc_id): float(score) for doc_id, score in contract_assets["base_hits"]
+    }
+
+    row_queries = _build_claim_retrieval_queries(claim_data, profile)
+    for query in row_queries:
+        expanded = _expand_query(query, profile)
+        hits = _hybrid_retrieve(bm25, embeddings, expanded, query, k=15)
+        for rank, (doc_id, score) in enumerate(hits[:10], 1):
+            boosted = float(score) + 1.0 - (rank * 0.05)
+            if doc_id not in combined_hits or boosted > combined_hits[doc_id]:
+                combined_hits[doc_id] = boosted
+
+    merged_hits = sorted(combined_hits.items(), key=lambda x: x[1], reverse=True)[:30]
+
+    part = claim_data.get("part_description", "")
+    country = claim_data.get("country", "")
+    rerank_query = f"{part} warranty coverage {country} months mileage"
+    try:
+        merged_hits = _rerank_snippets(
+            rerank_query, rows, merged_hits, top_k=25, timeout_s=30.0,
+        )
+    except Exception:
+        pass
+
+    context, _ = _format_context(rows, merged_hits, k=25, per_chars=2500)
+    return context, {
+        "scope": "row_aware" if row_queries else "shared_contract",
+        "queries": row_queries,
+        "hit_count": len(merged_hits),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -319,7 +584,7 @@ def _load_contract_context(
 
 _CLAIM_EVAL_PROMPT = """You are an expert warranty claims adjudicator. Evaluate this claim using ONLY the contract rules and passages provided below. Do NOT use any outside knowledge or assumptions about standard warranty terms.
 
-=== CONTRACT PROFILE (structured rules extracted from the contract) ===
+=== CONTRACT PROFILE (citation-backed fields only; unsupported high-impact fields were removed) ===
 {profile_json}
 
 === RELEVANT CONTRACT PASSAGES ===
@@ -338,6 +603,7 @@ _CLAIM_EVAL_PROMPT = """You are an expert warranty claims adjudicator. Evaluate 
 7. Check all listed exclusions — does any exclusion apply to this claim?
 8. If any required data is missing, set decision to "insufficient_info".
 9. If the claim is borderline or ambiguous, set decision to "requires_review" and explain why.
+10. When the profile summary and direct passages differ, trust the direct passages and use narrower wording.
 
 Return ONLY raw JSON. Do NOT wrap in ```json or any markdown. Keep string values SHORT (under 80 chars each). Be concise.
 {{
@@ -460,15 +726,16 @@ def evaluate_claims_table(
     # --- Load contract rules (once for the whole batch) ---
     _progress(f"Loading contract rules for {oem}/{contract_id}...")
     try:
-        profile, contract_passages = _load_contract_context(oem, contract_id)
+        contract_assets = _load_contract_assets(oem, contract_id)
     except Exception as e:
-        log.error("Failed to load contract context: %s", e)
+        log.error("Failed to load contract assets: %s", e)
         return [{
             "row_index": 0,
             "decision": "insufficient_info",
             "reason": f"Could not load contract rules: {e}",
         }], [f"ERROR: Could not load contract rules: {e}"]
 
+    profile = contract_assets["profile"]
     profile_status = profile.get("_status", "unknown")
     model_label = endpoint.split("-")[-1] if "-" in endpoint else endpoint
     _progress(
@@ -542,11 +809,15 @@ def evaluate_claims_table(
 
     # --- Evaluate each claim (parallel) ---
     total = len(claim_rows)
+    if total == 0:
+        _progress("Done! 0 claims evaluated.")
+        return [], mapping_warnings
     max_workers = min(20, total)
     results: List[Optional[Dict[str, Any]]] = [None] * total
 
     def _eval_one(i: int) -> Dict[str, Any]:
         idx, claim_data, id_fields = claim_rows[i]
+        contract_passages, retrieval_meta = _retrieve_claim_passages(contract_assets, claim_data)
 
         llm_result = _evaluate_single_claim(
             claim_data, profile, contract_passages, endpoint,
@@ -572,6 +843,8 @@ def evaluate_claims_table(
             "contract_references": "; ".join(
                 str(r) for r in (llm_result.get("contract_references") or [])
             ),
+            "retrieval_scope": retrieval_meta.get("scope", "shared_contract"),
+            "retrieval_queries": "; ".join(retrieval_meta.get("queries") or []),
             "evaluated_by": model_label,
         }
 

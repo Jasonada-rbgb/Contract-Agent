@@ -35,7 +35,7 @@ def get_contracts(request: Request, oem: Optional[str] = None) -> List[Dict[str,
 
     # Use OBO token if present, else fall back to app service principal
     token = request.headers.get("x-forwarded-access-token")
-    wc = WorkspaceClient(token=token, auth_type="pat") if token else WorkspaceClient()
+    wc = WorkspaceClient(token=token) if token else WorkspaceClient()
 
     kb_base = os.environ.get("KB_BUNDLE_BASE", "").strip().rstrip("/")
     if not kb_base:
@@ -62,6 +62,20 @@ class EvaluateClaimsRequest(BaseModel):
     file_base64: str  # base64-encoded bytes of CSV/XLSX
 
 
+def _serialize_claims_response(
+    oem: str,
+    contract_id: str,
+    rows: list[dict[str, Any]],
+    mapping_warnings: list[str],
+) -> Dict[str, Any]:
+    return {
+        "oem": oem,
+        "contract_id": contract_id,
+        "rows": rows,
+        "mapping_warnings": mapping_warnings,
+    }
+
+
 @app.post("/api/evaluate-claims")
 def api_evaluate_claims(req: EvaluateClaimsRequest) -> Dict[str, Any]:
     if not req.oem or not req.contract_id:
@@ -75,15 +89,25 @@ def api_evaluate_claims(req: EvaluateClaimsRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail="file_base64 is not valid base64")
 
     try:
-        rows = evaluate_claims_file(
+        rows, mapping_warnings = evaluate_claims_file(
             file_bytes=raw,
             filename=req.filename,
             oem=req.oem,
             contract_id=req.contract_id,
         )
-        return {"oem": req.oem, "contract_id": req.contract_id, "rows": rows}
+        return _serialize_claims_response(
+            req.oem,
+            req.contract_id,
+            rows,
+            mapping_warnings,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to evaluate claims: {e}")
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "app": "agent-contract-api"}
 
 
 def main():

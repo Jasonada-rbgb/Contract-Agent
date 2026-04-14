@@ -1,0 +1,198 @@
+[
+  {
+    "id": "claim_clear_in_warranty",
+    "description": "Standard production part failure well within warranty window and mileage",
+    "claim_data": {
+      "oem": "BMW",
+      "contract_id": "BMW",
+      "part_type": "production_part",
+      "part_description": "Fuel injection module",
+      "failure_description": "Fuel injector seal leak causing rough idle and check-engine light",
+      "vehicle_delivery_date": "2024-06-15",
+      "failure_date": "2025-03-10",
+      "mileage_at_failure_km": 25000,
+      "market": "Germany",
+      "is_wear_item": false
+    },
+    "expected_decision": "in_warranty",
+    "expected_confidence": "high",
+    "expected_reasoning_keywords": [
+      "within warranty period",
+      "mileage within limit",
+      "production part",
+      "seal defect"
+    ]
+  },
+  {
+    "id": "claim_clear_out_of_warranty_time",
+    "description": "Part failure far beyond warranty period expiry",
+    "claim_data": {
+      "oem": "BMW",
+      "contract_id": "BMW",
+      "part_type": "production_part",
+      "part_description": "Window regulator motor",
+      "failure_description": "Motor seized, window stuck in closed position",
+      "vehicle_delivery_date": "2018-01-10",
+      "failure_date": "2026-02-20",
+      "mileage_at_failure_km": 120000,
+      "market": "Germany",
+      "is_wear_item": false
+    },
+    "expected_decision": "out_of_warranty",
+    "expected_confidence": "high",
+    "expected_reasoning_keywords": [
+      "warranty period expired",
+      "beyond",
+      "absolute cap"
+    ]
+  },
+  {
+    "id": "claim_borderline_mileage",
+    "description": "Failure at mileage right near the contractual limit in North America",
+    "claim_data": {
+      "oem": "BMW",
+      "contract_id": "BMW",
+      "part_type": "production_part",
+      "part_description": "ABS wheel speed sensor",
+      "failure_description": "Intermittent ABS fault codes, sensor signal dropout",
+      "vehicle_delivery_date": "2022-08-01",
+      "failure_date": "2025-11-15",
+      "mileage_at_failure_miles": 149500,
+      "market": "USA",
+      "is_wear_item": false
+    },
+    "expected_decision": "in_warranty",
+    "expected_confidence": "medium",
+    "expected_reasoning_keywords": [
+      "mileage",
+      "limit",
+      "North America",
+      "close to",
+      "within"
+    ]
+  },
+  {
+    "id": "claim_wear_item_exclusion",
+    "description": "Wear-and-tear item failure that should be excluded from standard warranty",
+    "claim_data": {
+      "oem": "JLR",
+      "contract_id": "JLR_Warranty",
+      "part_type": "wear_item",
+      "part_description": "Brake pads, front axle",
+      "failure_description": "Brake pads worn below minimum thickness at scheduled service",
+      "vehicle_delivery_date": "2024-03-20",
+      "failure_date": "2025-09-15",
+      "mileage_at_failure_miles": 28000,
+      "market": "UK",
+      "is_wear_item": true
+    },
+    "expected_decision": "out_of_warranty",
+    "expected_confidence": "high",
+    "expected_reasoning_keywords": [
+      "wear and tear",
+      "normal wear",
+      "exclusion",
+      "not covered"
+    ]
+  },
+  {
+    "id": "claim_service_part_edge",
+    "description": "JLR service part failure after service-part warranty but within vehicle warranty",
+    "claim_data": {
+      "oem": "JLR",
+      "contract_id": "JLR_Warranty",
+      "part_type": "service_part",
+      "part_description": "Replacement alternator",
+      "failure_description": "Alternator output voltage below specification, battery not charging",
+      "retail_sale_date": "2023-06-01",
+      "failure_date": "2026-01-15",
+      "mileage_at_failure_miles": 35000,
+      "market": "UK",
+      "is_wear_item": false
+    },
+    "expected_decision": "requires_review",
+    "expected_confidence": "medium",
+    "expected_reasoning_keywords": [
+      "service part",
+      "warranty period",
+      "retail sale",
+      "exceeded",
+      "review"
+    ]
+  },
+  {
+    "id": "claim_misuse_exclusion",
+    "description": "Part failure caused by customer misuse that should trigger exclusion review",
+    "claim_data": {
+      "oem": "JLR",
+      "contract_id": "JLR_Warranty",
+      "part_type": "production_part",
+      "part_description": "Turbocharger assembly",
+      "failure_description": "Turbo bearing failure; oil analysis shows extended oil change intervals and contaminated oil",
+      "vehicle_delivery_date": "2024-09-01",
+      "failure_date": "2025-08-20",
+      "mileage_at_failure_miles": 18000,
+      "market": "UK",
+      "is_wear_item": false
+    },
+    "expected_decision": "requires_review",
+    "expected_confidence": "medium",
+    "expected_reasoning_keywords": [
+      "misuse",
+      "maintenance",
+      "exclusion",
+      "oil",
+      "investigation"
+    ]
+  },
+  {
+    "id": "claim_goodwill_zone",
+    "description": "BMW failure in the goodwill extension window (months 37-60) outside North America",
+    "claim_data": {
+      "oem": "BMW",
+      "contract_id": "BMW",
+      "part_type": "production_part",
+      "part_description": "Electronic throttle body",
+      "failure_description": "Throttle body motor intermittent, limp mode activation",
+      "vehicle_delivery_date": "2022-03-01",
+      "failure_date": "2025-09-15",
+      "mileage_at_failure_km": 65000,
+      "market": "France",
+      "is_wear_item": false
+    },
+    "expected_decision": "requires_review",
+    "expected_confidence": "medium",
+    "expected_reasoning_keywords": [
+      "goodwill",
+      "extension",
+      "beyond standard warranty",
+      "conditional",
+      "negotiation"
+    ]
+  },
+  {
+    "id": "claim_incomplete_data",
+    "description": "Claim with missing critical fields that should require manual review",
+    "claim_data": {
+      "oem": "BMW",
+      "contract_id": "BMW",
+      "part_type": "production_part",
+      "part_description": "Sensor module (unspecified)",
+      "failure_description": "Part not functioning",
+      "vehicle_delivery_date": null,
+      "failure_date": "2025-06-01",
+      "mileage_at_failure_km": null,
+      "market": "Germany",
+      "is_wear_item": false
+    },
+    "expected_decision": "requires_review",
+    "expected_confidence": "low",
+    "expected_reasoning_keywords": [
+      "missing",
+      "insufficient",
+      "delivery date",
+      "mileage",
+      "cannot determine"
+    ]
+  }
+]
