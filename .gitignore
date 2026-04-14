@@ -31,8 +31,22 @@ env/
 Thumbs.db
 desktop.ini
 
-# Cursor internal (not the agents/skills/automations)
-.cursor/projects/
+# Cursor internal
+.cursor/
+
+# Workspace-only files (not part of the Databricks app)
+AGENTS.md
+Warranty_Contract_Agent_Overview.md
+Task.md
+ai/
+scripts/
+complaint-agent/
+debug.log
+node_modules/
+package.json
+package-lock.json
+.playwright-cli/
+.pytest_tmp/
 
 # Compiled assets
 *.pyc
