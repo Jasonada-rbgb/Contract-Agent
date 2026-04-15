@@ -8,7 +8,7 @@ An AI-powered warranty contract analysis platform built on Databricks, enabling 
 |------|-------------|
 | **Contract Q&A** | Ask natural language questions about any warranty contract and receive cited, evidence-based answers |
 | **Claims Evaluator** | Upload a claims dataset (CSV/XLSX) and have each claim evaluated against contract rules automatically |
-| **Ingest Contract** | Upload new warranty contract PDFs to make them searchable and queryable |
+| **Ingest Contract** | Upload contract documents (PDF, MSG, PPTX, XLSX, HTML, images) to make them searchable |
 | **Feedback** | Submit structured feedback to improve agent accuracy over time |
 
 ## Key Features
@@ -17,107 +17,140 @@ An AI-powered warranty contract analysis platform built on Databricks, enabling 
 - **Multi-contract support** -- query and compare multiple contracts simultaneously
 - **Hybrid retrieval** -- BM25 keyword search + vector cosine similarity + LLM semantic reranking
 - **Multi-language** -- handles English and German contracts with automatic translation
-- **Model selection** -- choose between Gemini Flash (fast), Claude Opus (accurate), or o3 (deep reasoning) for claims evaluation
+- **Multi-format ingestion** -- PDF, Outlook email (.msg), PowerPoint, Excel, HTML/MHT, and images
+- **Per-row claims retrieval** -- each claim is evaluated with row-specific contract evidence
+- **Profile grounding** -- contract profiles are citation-verified before use in reasoning
+- **Model selection** -- choose between Claude Opus 4.6 (accurate), GPT-4.1 (balanced), or Gemini Flash (fast) for claims
 - **Parallel evaluation** -- evaluates claims concurrently for speed
 - **Per-user memory** -- chat history persists across sessions with browsable history
 - **Inline feedback** -- thumbs up/down with optional comments on every response
-- **AI thinking panel** -- see the agent's retrieval and reasoning steps in real-time
+- **Thinking panel** -- live reasoning text and tool activity during Q&A, with "Thought for Xs" elapsed time
 
 ## Contracts Supported
 
-- **BMW** -- Gewahrleistungsvereinbarung (Robert Bosch GmbH)
+- **BMW** -- Gewährleistungsvereinbarung (Robert Bosch GmbH)
 - **JLR** -- Jaguar Land Rover Warranty Agreement
 
 New contracts can be ingested at any time through the app.
 
 ## Architecture
 
-- **Frontend**: Streamlit
-- **Agent Framework**: OpenAI Agents SDK
-- **LLM (Q&A/Reranking)**: Claude Opus 4.6 via Databricks Model Serving
-- **LLM (Claims)**: Gemini 2.5 Flash / Claude Opus / OpenAI o3 (user selectable)
+- **Frontend**: Streamlit (deployed as Databricks Apps)
+- **Agent Framework**: OpenAI Agents SDK via `databricks-openai`
+- **LLM (Q&A / Reranking / Profile)**: Claude Opus 4.6 via Databricks Model Serving
+- **LLM (Claims)**: Claude Opus 4.6 / GPT-4.1 / Gemini 2.5 Flash (user selectable)
 - **Embeddings**: GTE Large EN via Databricks Model Serving
 - **Storage**: Databricks Unity Catalog Volumes
 - **Deployment**: Databricks Apps
 
-## Project Structure
+## File Reference
 
-```
-agent_server/
-  agent.py              # Agent logic, retrieval pipeline, tools
-  claims_batch.py       # Claims evaluation engine (parallel, multi-model)
-  ingest.py             # PDF ingestion pipeline (OCR, chunking, embeddings)
-  evaluate_agent.py     # Regression test runner
-  start_server.py       # FastAPI server (MLflow integration)
-  utils.py              # Shared utilities
-eval_test_cases/
-  bmw.json              # BMW verified test cases
-scripts/
-  quickstart.py         # One-command setup
-  discover_tools.py     # Workspace resource discovery
-  start_app.py          # Local app launcher
-streamlit_app.py        # Main application UI
-app.yaml                # Databricks App configuration
-pyproject.toml          # Dependencies and scripts
-feedback.md             # User feedback log
-```
+### Core Application
 
-## Getting Started
+| File | Purpose |
+|------|---------|
+| `streamlit_app.py` | Main Streamlit UI -- Q&A chat, Claims Evaluator, Ingest, Feedback modes, chat history, inline feedback, thinking panel |
+| `app.yaml` | Databricks App config -- LLM endpoints, environment variables, resource permissions |
+| `pyproject.toml` | Python dependencies and project scripts |
+| `requirements.txt` | Pip-format dependency list |
+| `databricks.yml` | Databricks bundle config for resource permissions |
 
-### For Users
+### Backend (`agent_server/`)
 
-1. Navigate to the Databricks App URL
-2. Select one or more contracts from the sidebar
-3. Choose a mode: Q&A, Claims Evaluator, Ingest, or Feedback
-4. Start asking questions or uploading data
+| File | Lines | Purpose |
+|------|-------|---------|
+| `agent.py` | ~1440 | Core agent logic: retrieval pipeline (BM25 + vector + rerank), contract profile extraction with citation grounding, query expansion, LLM calls with timeout/retry, tool definitions (`retrieve_contract_context`, `get_contract_profile`, `list_available_contracts`), session-scoped retrieval trace persistence |
+| `claims_batch.py` | ~700 | Claims evaluation engine: shared contract context loading, per-row retrieval queries, parallel claim evaluation via ThreadPoolExecutor, column auto-mapping, multi-model support |
+| `council.py` | ~190 | Hidden Q&A council (feature-flagged off): fans out answer synthesis to multiple models, chair model synthesizes final answer. Intentionally UI-only, not applied to API path |
+| `ingest.py` | ~850 | Document ingestion pipeline: multi-format text extraction (PDF/MSG/PPTX/XLSX/HTML/images), vision OCR for scanned docs, sentence-aware chunking, embedding computation, staging manifest management |
+| `start_server.py` | ~110 | FastAPI server: `/api/contracts` (list contracts), `/api/evaluate-claims` (batch claims evaluation), MLflow integration |
+| `evaluate_agent.py` | ~100 | Regression test runner using MLflow scorers against eval fixtures |
+| `utils.py` | ~80 | Shared utilities: workspace client factory, OBO auth helpers |
+| `__init__.py` | 1 | Package marker |
 
-### For Developers
+### Evaluation & Testing
 
-```bash
-# Pull app files from Databricks workspace
-databricks workspace export-dir "/Workspace/Users/<you>/databricks_apps/agent-contract_*/agent-openai-agents-sdk" ./agent-contract
+| File | Purpose |
+|------|---------|
+| `eval_test_cases/bmw.json` | BMW Q&A regression fixtures (10 test cases covering warranty periods, liability, costs, edge cases) |
+| `eval_test_cases/jlr.json` | JLR Q&A regression fixtures (warranty periods, powertrain, exclusions, markets, claims process) |
+| `eval_test_cases/claims_golden.json` | Claims evaluation golden dataset (expected decisions for in-warranty, out-of-warranty, edge cases) |
+| `tests/test_feedback_cycle_regressions.py` | Feedback cycle regression tests |
+| `tests/test_markdown_council.py` | Council markdown output tests |
 
-# Install dependencies
-cd agent-contract
-uv sync
+### Setup Scripts (`scripts/`)
 
-# Run locally
-uv run start-app
+| File | Purpose |
+|------|---------|
+| `quickstart.py` | One-command setup: auth, profile config, workspace discovery |
+| `discover_tools.py` | Scan Databricks workspace for available serving endpoints, UC functions, volumes |
+| `start_app.py` | Local app launcher (`uv run start-app`) |
+| `grant_lakebase_permissions.py` | Grant Lakebase permissions for memory features |
 
-# Deploy
-databricks apps deploy agent-contract --source-code-path "/Workspace/Users/<you>/databricks_apps/agent-contract_*/agent-openai-agents-sdk"
+### Config & Meta
 
-# Run evaluation
-uv run agent-evaluate
-```
-
-### Multi-Agent Orchestrator (Repo Root)
-
-From `c:\Users\ADJ1DE\Documents\Agent Workflow`:
-
-```powershell
-py -m ai.orchestrator.run --task "<feedback_id|prompt>" --root "Agent-1/agent-contract/agent-openai-agents-sdk"
-py -m ai.orchestrator.resume --run-id "<run_id>"
-py -m ai.orchestrator.status --run-id "<run_id>"
-py -m ai.orchestrator.memory --query "<text>"
-```
+| File | Purpose |
+|------|---------|
+| `AGENTS.md` | Databricks agent development guide (template-provided) |
+| `.env.example` | Example environment variables for local development |
+| `.gitignore` | Git exclusions |
+| `feedback.md` | Structured user feedback log with lifecycle tracking (OPEN -> VERIFIED) |
 
 ## Environment Variables
 
 Configured in `app.yaml`:
 
-| Variable | Purpose |
-|----------|---------|
-| `LLM_ENDPOINT` | Primary LLM for Q&A and reranking |
-| `RERANK_ENDPOINT` | Semantic reranker endpoint |
-| `VISION_ENDPOINT` | Vision model for OCR of scanned PDFs |
-| `REASONING_ENDPOINT` | Reasoning model for claims evaluation |
-| `EMBEDDING_ENDPOINT` | Embedding model for vector search |
-| `KB_BUNDLE_BASE` | Production knowledge base location |
-| `STAGING_BUNDLE_BASE` | Staging volume for new contracts |
+| Variable | Current Value | Purpose |
+|----------|---------------|---------|
+| `LLM_ENDPOINT` | `databricks-claude-opus-4-6` | Primary LLM for Q&A reasoning, reranking, profile extraction |
+| `RERANK_ENDPOINT` | `databricks-claude-opus-4-6` | Semantic reranker (same as LLM for max accuracy) |
+| `VISION_ENDPOINT` | `databricks-claude-opus-4-6` | Vision model for OCR of scanned PDFs and images |
+| `REASONING_ENDPOINT` | `databricks-claude-opus-4-6` | Reasoning model for claims evaluation |
+| `EMBEDDING_ENDPOINT` | `databricks-gte-large-en` | Embedding model for vector search |
+| `KB_BUNDLE_BASE` | `/Volumes/bci_rbs_prod/.../kb_bundle_v1` | Production knowledge base location |
+| `STAGING_BUNDLE_BASE` | `/Volumes/mdna_dev/.../uploads` | Staging volume for new contracts |
+| `COUNCIL_ENABLED` | `false` | Multi-model Q&A council (off by default) |
 
-## Accuracy
+## Serving Endpoints Used
 
-Verified through structured testing with 10 BMW contract test cases covering warranty periods, liability caps, cost structures, edge cases, and fabrication checks. 10/10 passed with fully accurate responses.
+| Endpoint | Status | Used For |
+|----------|--------|----------|
+| `databricks-claude-opus-4-6` | Active | Q&A, reranking, profile, vision OCR, claims reasoning |
+| `databricks-gte-large-en` | Active | Embeddings |
+| `gpt_41` | Active | Claims evaluation (user selectable) |
+| `gemini_25_flash` | Active | Claims evaluation (user selectable), fast triage |
+| `gemini_25_pro` | Available | Council member (when enabled) |
 
-Regression test suite available in `eval_test_cases/`.
+## Databricks Volumes
+
+| Volume | Path | Purpose |
+|--------|------|---------|
+| Production KB | `/Volumes/bci_rbs_prod/exploratory/warranty_agent/kb_store/kb_bundle_v1` | Ingested contract chunks + embeddings |
+| Staging uploads | `/Volumes/mdna_dev/warranty_agent_staging/uploads` | New contract uploads, staging bundles |
+| User sessions | `/Volumes/mdna_dev/warranty_agent_staging/user_sessions` | Per-user chat history (JSONL) |
+| Contracts | `/Volumes/mdna_dev/warranty_agent_staging/contracts` | Contract checker files |
+
+## Getting Started
+
+### For Users
+1. Navigate to the [Databricks App](https://agent-contract-2236441816741128.8.azure.databricksapps.com)
+2. Select one or more contracts from the sidebar
+3. Choose a mode: Q&A, Claims Evaluator, Ingest, or Feedback
+4. Start asking questions or uploading data
+
+### For Developers
+```bash
+# Install dependencies
+cd Agent-1/agent-contract/agent-openai-agents-sdk
+uv sync
+
+# Run locally
+uv run start-app
+
+# Deploy to Databricks
+databricks workspace import-dir . "/Workspace/Users/<you>/databricks_apps/agent-contract_*/agent-openai-agents-sdk" --overwrite
+databricks apps deploy agent-contract --source-code-path "/Workspace/Users/<you>/databricks_apps/agent-contract_*/agent-openai-agents-sdk"
+
+# Run evaluation
+uv run agent-evaluate
+```
