@@ -38,7 +38,7 @@ resources:
 
           # -------- LLM endpoints --------
           - name: LLM_ENDPOINT
-            value: "gpt_41"
+            value: "databricks-claude-opus-4-8"
 
           # -------- Ingestion notebook path --------
           - name: INGEST_NOTEBOOK_PATH

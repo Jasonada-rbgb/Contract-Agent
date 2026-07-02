@@ -91,7 +91,7 @@ def _llm_endpoint() -> str:
     return (
         os.getenv("RERANK_ENDPOINT")
         or os.getenv("LLM_ENDPOINT")
-        or "databricks-claude-opus-4-6"
+        or "databricks-claude-opus-4-8"
     ).strip()
 
 
@@ -1329,7 +1329,7 @@ def create_agent(
     mcp_servers: list[McpServer] | None = None,
     selected_contracts: list[dict[str, str]] | None = None,
 ) -> Agent:
-    llm = os.getenv("LLM_ENDPOINT", "databricks-claude-opus-4-6")
+    llm = os.getenv("LLM_ENDPOINT", "databricks-claude-opus-4-8")
 
     contract_context_block = ""
     if selected_contracts and len(selected_contracts) > 1:

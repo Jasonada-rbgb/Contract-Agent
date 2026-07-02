@@ -36,7 +36,7 @@ Extracts a structured profile from the contract text using an LLM, then grounds 
 
 **Sub-skills used internally:**
 - **Profile excerpt selection** -- BM25 queries across fixed profile-related topics to gather the most relevant chunks
-- **LLM extraction** -- Sends excerpts to Claude Opus 4.6 with a structured JSON schema prompt
+- **LLM extraction** -- Sends excerpts to Claude Opus 4.8 with a structured JSON schema prompt
 - **Citation grounding** -- `_ground_contract_profile` verifies each field value against the text of its cited passages using substring matching; stores a `verification` dict per field
 
 ---
@@ -66,7 +66,7 @@ The core retrieval pipeline. Finds the most relevant contract passages for a giv
 
 **Stage 3 -- LLM Semantic Reranking**
 - Pools the top 40-60 candidates
-- Sends them to Claude Opus 4.6 with the original question
+- Sends them to Claude Opus 4.8 with the original question
 - Model returns a relevance-ordered ranking
 - Budget-aware: skips reranking if less than 15 seconds remain in the retrieval timeout
 
@@ -174,7 +174,7 @@ Routes each file to the appropriate extractor based on extension:
 | PPTX | `_extract_text_pptx` | Slide text, table content, speaker notes via `python-pptx` |
 | XLSX/XLS | `_extract_text_xlsx` | All sheets as pipe-delimited rows via `openpyxl` (max 5000 rows per sheet) |
 | HTML/HTM/MHT | `_extract_text_html` | Visible text via `BeautifulSoup`; MHT MIME envelope stripped first |
-| PNG/BMP/JPG | `_extract_text_image` | Vision OCR via Claude Opus 4.6; BMP converted to PNG first |
+| PNG/BMP/JPG | `_extract_text_image` | Vision OCR via Claude Opus 4.8; BMP converted to PNG first |
 
 All extractors produce the same output shape: a list of `{page: int, text: str}` dicts, one per logical "page" (PDF page, email, slide, sheet, or image).
 
@@ -221,7 +221,7 @@ Sends chunks to the GTE Large EN embedding endpoint in batches of 50. Empty text
 | **Inputs** | `question`, `evidence`, `profile_summary` |
 | **Outputs** | Synthesized markdown answer |
 
-Fans out answer generation to multiple models (Gemini 2.5 Pro, GPT-4.1, Claude Opus 4.6) in parallel using a shared evidence packet from one retrieval pass. A chair model (Gemini 2.5 Pro) then synthesizes the drafts into one final answer, preserving only citation-backed claims and preferring narrower wording when drafts disagree. This is intentionally a UI-only feature -- the API path always uses single-model answers.
+Fans out answer generation to multiple models (Gemini 2.5 Pro, GPT-4.1, Claude Opus 4.8) in parallel using a shared evidence packet from one retrieval pass. A chair model (Gemini 2.5 Pro) then synthesizes the drafts into one final answer, preserving only citation-backed claims and preferring narrower wording when drafts disagree. This is intentionally a UI-only feature -- the API path always uses single-model answers.
 
 ---
 

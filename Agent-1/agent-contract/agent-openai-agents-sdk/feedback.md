@@ -344,7 +344,7 @@ Q&A responses should render as consistently structured GitHub-flavored Markdown 
 - **Date**: 2026-04-02 10:00 UTC
 
 **Description**:
-The primary LLM endpoint was changed from `databricks-claude-opus-4-6` (which is a Databricks-hosted endpoint that cannot be queried from the app's serving path) to a non-Databricks endpoint. After testing multiple alternatives, `openai_gpt5` was selected as the default for `LLM_ENDPOINT` and `RERANK_ENDPOINT`. The `openai` dependency was also updated from `<2.0.0` to `>=2.8.0,<3.0.0` to resolve a `databricks-agents` / `litellm` compatibility conflict. Hardcoded `max_tokens` was removed from the general response path.
+The primary LLM endpoint was changed from `databricks-claude-opus-4-8` (which is a Databricks-hosted endpoint that cannot be queried from the app's serving path) to a non-Databricks endpoint. After testing multiple alternatives, `openai_gpt5` was selected as the default for `LLM_ENDPOINT` and `RERANK_ENDPOINT`. The `openai` dependency was also updated from `<2.0.0` to `>=2.8.0,<3.0.0` to resolve a `databricks-agents` / `litellm` compatibility conflict. Hardcoded `max_tokens` was removed from the general response path.
 
 **Changes**:
 - `app.yaml`: LLM_ENDPOINT and RERANK_ENDPOINT set to `openai_gpt5`
@@ -828,5 +828,37 @@ Changes to elapsed time display (lines 951-954):
 No backend changes. No agent.py changes. No claims_batch.py changes.
 
 **Reference**: `ai/research/thinking-ux-audit-2026.md`
+
+---
+
+### FB-20260422-guardrail-tripwire-comparison
+- **Status**: VERIFIED
+- **Category**: Bug / Guardrails
+- **Severity**: Critical
+- **Contract**: All (multi-contract)
+- **Reporter**: user (via adj1de@bosch.com)
+- **Date**: 2026-04-22 12:00 UTC
+- **Last Attempt Run ID**: guardrail-fix-20260422
+- **Last Decision**: APPROVED
+- **Blocker Classification**: 
+- **Retry Count**: 0
+- **Evidence**: Deploy 01f13e47e2e410c99db6c820d93ea0b9 SUCCEEDED; Browser QA 6/6 pass, 0 fail, 0 warn; answer_visible_in_chat=PASS; guardrail_fix_verified=PASS; Q&A completed in 62s with citations and evidence
+- **Last Updated**: 2026-04-22T12:39:00+00:00
+
+**Description**:
+When a user selects two contracts (e.g. JLR + BMW) and asks a comparison question, the citation output guardrail triggers a tripwire after ~105 seconds of processing, discarding the entire response. The user sees "Error: Guardrail Output: Guardrail triggered tripwire" instead of the comparison answer.
+
+**Root Cause**:
+The `citation_guardrail` in `agent_server/guardrails.py` was configured with `tripwire_triggered=True` when `[n]` citation patterns were not found in the output. For multi-contract comparison responses, the output format (tables, structured sections) may not include inline `[n]` citations in every section. Additionally, `str(output)` on the Agents SDK output object may not properly extract the text content, causing false negatives.
+
+**Steps to Reproduce**:
+1. Select both JLR and BMW contracts in the sidebar
+2. Ask a comparison question (e.g. "Compare the warranty periods")
+3. Wait for processing (~105 seconds of tool calls)
+4. Observe error: "Error: Guardrail Output: Guardrail triggered tripwire"
+
+**Fixes Applied**:
+- `agent_server/guardrails.py`: Added `_extract_output_text()` helper for robust text extraction from various output object types; citation guardrail no longer triggers `tripwire_triggered=True` (changed to warning-only); added bypass for comparison/table-formatted responses
+- `streamlit_app.py`: Added graceful guardrail exception handling in `_background()` thread so responses are preserved with a quality warning instead of being discarded
 
 ---

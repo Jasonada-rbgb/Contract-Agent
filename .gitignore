@@ -70,3 +70,11 @@ ai/orchestrator/runs/*/manifest.md
 
 # Downloaded exports
 *.csv
+
+start_litellm_proxy.ps1
+start_claude.ps1
+
+start_litellm_proxy.cmd
+start_claude.cmd
+
+start_claude_central.cmd

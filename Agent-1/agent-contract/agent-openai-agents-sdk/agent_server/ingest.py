@@ -40,7 +40,7 @@ def staging_raw_dir(oem: str, kb_id: str) -> str:
 
 
 def _vision_endpoint() -> str:
-    return (os.getenv("VISION_ENDPOINT") or "databricks-claude-opus-4-6").strip()
+    return (os.getenv("VISION_ENDPOINT") or "databricks-claude-opus-4-8").strip()
 
 
 def _embedding_endpoint() -> str:

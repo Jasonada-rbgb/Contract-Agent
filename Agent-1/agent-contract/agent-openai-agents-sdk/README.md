@@ -20,7 +20,7 @@ An AI-powered warranty contract analysis platform built on Databricks, enabling 
 - **Multi-format ingestion** -- PDF, Outlook email (.msg), PowerPoint, Excel, HTML/MHT, and images
 - **Per-row claims retrieval** -- each claim is evaluated with row-specific contract evidence
 - **Profile grounding** -- contract profiles are citation-verified before use in reasoning
-- **Model selection** -- choose between Claude Opus 4.6 (accurate), GPT-4.1 (balanced), or Gemini Flash (fast) for claims
+- **Model selection** -- choose between Claude Opus 4.8 (accurate), GPT-4.1 (balanced), or Gemini Flash (fast) for claims
 - **Parallel evaluation** -- evaluates claims concurrently for speed
 - **Per-user memory** -- chat history persists across sessions with browsable history
 - **Inline feedback** -- thumbs up/down with optional comments on every response
@@ -37,8 +37,8 @@ New contracts can be ingested at any time through the app.
 
 - **Frontend**: Streamlit (deployed as Databricks Apps)
 - **Agent Framework**: OpenAI Agents SDK via `databricks-openai`
-- **LLM (Q&A / Reranking / Profile)**: Claude Opus 4.6 via Databricks Model Serving
-- **LLM (Claims)**: Claude Opus 4.6 / GPT-4.1 / Gemini 2.5 Flash (user selectable)
+- **LLM (Q&A / Reranking / Profile)**: Claude Opus 4.8 via Databricks Model Serving
+- **LLM (Claims)**: Claude Opus 4.8 / GPT-4.1 / Gemini 2.5 Flash (user selectable)
 - **Embeddings**: GTE Large EN via Databricks Model Serving
 - **Storage**: Databricks Unity Catalog Volumes
 - **Deployment**: Databricks Apps
@@ -102,10 +102,10 @@ Configured in `app.yaml`:
 
 | Variable | Current Value | Purpose |
 |----------|---------------|---------|
-| `LLM_ENDPOINT` | `databricks-claude-opus-4-6` | Primary LLM for Q&A reasoning, reranking, profile extraction |
-| `RERANK_ENDPOINT` | `databricks-claude-opus-4-6` | Semantic reranker (same as LLM for max accuracy) |
-| `VISION_ENDPOINT` | `databricks-claude-opus-4-6` | Vision model for OCR of scanned PDFs and images |
-| `REASONING_ENDPOINT` | `databricks-claude-opus-4-6` | Reasoning model for claims evaluation |
+| `LLM_ENDPOINT` | `databricks-claude-opus-4-8` | Primary LLM for Q&A reasoning, reranking, profile extraction |
+| `RERANK_ENDPOINT` | `databricks-claude-opus-4-8` | Semantic reranker (same as LLM for max accuracy) |
+| `VISION_ENDPOINT` | `databricks-claude-opus-4-8` | Vision model for OCR of scanned PDFs and images |
+| `REASONING_ENDPOINT` | `databricks-claude-opus-4-8` | Reasoning model for claims evaluation |
 | `EMBEDDING_ENDPOINT` | `databricks-gte-large-en` | Embedding model for vector search |
 | `KB_BUNDLE_BASE` | `/Volumes/bci_rbs_prod/.../kb_bundle_v1` | Production knowledge base location |
 | `STAGING_BUNDLE_BASE` | `/Volumes/mdna_dev/.../uploads` | Staging volume for new contracts |
@@ -115,7 +115,7 @@ Configured in `app.yaml`:
 
 | Endpoint | Status | Used For |
 |----------|--------|----------|
-| `databricks-claude-opus-4-6` | Active | Q&A, reranking, profile, vision OCR, claims reasoning |
+| `databricks-claude-opus-4-8` | Active | Q&A, reranking, profile, vision OCR, claims reasoning |
 | `databricks-gte-large-en` | Active | Embeddings |
 | `gpt_41` | Active | Claims evaluation (user selectable) |
 | `gemini_25_flash` | Active | Claims evaluation (user selectable), fast triage |

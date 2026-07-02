@@ -30,19 +30,19 @@ env:
   # -------- LLM endpoints --------
   # Primary agent model for Q&A reasoning + reranking + profile extraction
   - name: LLM_ENDPOINT
-    value: "databricks-claude-opus-4-6"
+    value: "databricks-claude-opus-4-8"
 
   # Semantic reranker + profile extraction (same as LLM for max accuracy)
   - name: RERANK_ENDPOINT
-    value: "databricks-claude-opus-4-6"
+    value: "databricks-claude-opus-4-8"
 
   # Vision-capable model for OCR of scanned PDFs
   - name: VISION_ENDPOINT
-    value: "databricks-claude-opus-4-6"
+    value: "databricks-claude-opus-4-8"
 
   # Reasoning model for claims evaluation (multi-step rule application)
   - name: REASONING_ENDPOINT
-    value: "databricks-claude-opus-4-6"
+    value: "databricks-claude-opus-4-8"
 
   # Embedding endpoint for hybrid vector retrieval
   - name: EMBEDDING_ENDPOINT
@@ -74,8 +74,8 @@ resources:
   - name: openai-gpt5
     serving_endpoint: openai_gpt5
     permission: CAN_QUERY
-  - name: claude-opus-4-6
-    serving_endpoint: databricks-claude-opus-4-6
+  - name: claude-opus-4-8
+    serving_endpoint: databricks-claude-opus-4-8
     permission: CAN_QUERY
   - name: gte-large-en
     serving_endpoint: databricks-gte-large-en

@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 COUNCIL_ENDPOINTS: list[str] = [
     "gemini_25_pro",
     "gpt_41",
-    "databricks-claude-opus-4-6",
+    "databricks-claude-opus-4-8",
 ]
 
 CHAIR_ENDPOINT = "gemini_25_pro"

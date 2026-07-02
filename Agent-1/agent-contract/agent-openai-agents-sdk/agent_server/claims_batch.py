@@ -235,7 +235,7 @@ def _reasoning_endpoint() -> str:
     return (
         os.getenv("REASONING_ENDPOINT")
         or os.getenv("LLM_ENDPOINT")
-        or "databricks-claude-opus-4-6"
+        or "databricks-claude-opus-4-8"
     ).strip()
 
 

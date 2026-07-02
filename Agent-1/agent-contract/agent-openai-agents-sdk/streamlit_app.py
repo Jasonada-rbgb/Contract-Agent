@@ -1027,7 +1027,7 @@ elif "Claims" in mode:
     st.caption(f"Evaluating against **{contract['oem']} -- {contract['kb_id']}**")
 
     EVAL_MODELS = {
-        "Claude Opus 4.6 \u2014 Accurate": "databricks-claude-opus-4-6",
+        "Claude Opus 4.8 \u2014 Accurate": "databricks-claude-opus-4-8",
         "GPT-4.1 \u2014 Balanced": "gpt_41",
         "Gemini 2.5 Flash \u2014 Fast": "gemini_25_flash",
     }
