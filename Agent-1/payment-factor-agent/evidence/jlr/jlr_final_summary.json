@@ -1,0 +1,56 @@
+{
+  "created_utc": "2026-07-13T00:00:00+00:00",
+  "elapsed_seconds": 47.46199169999454,
+  "workbooks_processed": 18,
+  "rows_loaded": 433961,
+  "gross_cost_eur": 68646127.79461294,
+  "manual_final_recovery_eur": 10122393.314831838,
+  "contract_method_payable_eur": 10150103.080814522,
+  "manual_in_scope_eur": 10122393.314831842,
+  "manual_minus_contract_in_scope_eur": -27709.76598268452,
+  "excluded_side_letter_manual_eur": 0.0,
+  "excluded_side_letter_rows": 52304,
+  "decision_counts": {
+    "settled_by_agreement": 222756,
+    "payable": 120902,
+    "excluded_side_letter_otp": 52304,
+    "not_payable": 37973,
+    "requires_review": 26
+  },
+  "reason_bucket_counts": {
+    "dmya": 200598,
+    "pfacc_or_sample": 103862,
+    "manual_override_otp": 52304,
+    "dmya_databricks": 22158,
+    "uk_cat4_dmya": 17040,
+    "not_bosch_or_not_identified": 16106,
+    "rb_warranty_exclusion": 13407,
+    "uk_cat2": 8460,
+    "sample_market_missing_cat_or_rate": 16,
+    "pfacc_or_sample_missing_rate": 10
+  },
+  "delta_scope_counts": {
+    "in_contract_scope": 381657,
+    "excluded_from_delta": 52304
+  },
+  "confidence_bucket_counts": {
+    "high": 433935,
+    "low": 26
+  },
+  "market_scope_manual_eur": {
+    "export_market": 9361733.08632517,
+    "sample_market": 760660.2285066693
+  },
+  "market_scope_contract_eur": {
+    "export_market": 9389442.852307856,
+    "sample_market": 760660.2285066693
+  },
+  "method_notes": [
+    "Contract logic overrides workbook/manual outcome where deterministic contract rules conflict.",
+    "OTP and side-letter rows are excluded from the contract-vs-manual delta.",
+    "Export rows use the pipeline-effective payable rate after Acceptance Basis, DMYA/PFACC lookups, duplicate handling, RB warranty flags, and HLDF labour handling.",
+    "UK sample rows use CAT decision logic: CAT1/CAT1 OOT payable, CAT2/CAT3 rejected, CAT4 DMYA.",
+    "DMTL MY2023 Databricks DMYA rate overridden from 100% to 35% based on confirmed resample/business adjustment: initial BBTRVY pallet was not representative; BBVDHN retest set the overall accepted rate.",
+    "NGI resample note recorded as pending exact product/rate evidence; no NGI MY2023+ Databricks DMYA rows were affected in this output."
+  ]
+}

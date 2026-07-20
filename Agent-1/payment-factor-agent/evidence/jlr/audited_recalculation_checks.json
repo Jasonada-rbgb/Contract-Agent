@@ -1,0 +1,18 @@
+{
+  "scenario": "safe answer-date-only Databricks DMYA MY2023+ with DMTL MY2023 resample override",
+  "dmtl_override": {
+    "product_family": "DMTL",
+    "model_year": "2023",
+    "old_rate": 1.0,
+    "new_rate": 0.35,
+    "rows_affected": 3341,
+    "gross_eur_affected": 698719.47,
+    "manual_eur_affected": 244526.3,
+    "contract_eur_affected": 244551.81,
+    "manual_minus_contract_eur_affected": -25.51
+  },
+  "manual_final_recovery_eur": 10122393.31,
+  "contract_method_payable_eur": 10150103.08,
+  "manual_minus_contract_eur": -27709.77,
+  "ngi_status": "No NGI rows currently use dmya_databricks/corrected Databricks rate in this output; exact NGI resample rate/pallet evidence still needed before applying an override."
+}
