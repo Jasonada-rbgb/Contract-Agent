@@ -1,8 +1,0 @@
-{
-  "rate_rows": 5740,
-  "thin_denominator_rows": 2740,
-  "dmya_formula": "CAT1 / (CAT1 + CAT2 + CAT3); CAT4 excluded",
-  "date_basis": "ST_COMPLETED_DATE (answer date) inside model-year calendar year; SL_CREATED_DATE NOT gated",
-  "min_denominator_floor": 10,
-  "output_csv": "C:\\Users\\ADJ1DE\\Documents\\Agent Workflow\\output\\reverify_20260720\\02_fixes\\jlr_dmya_answer_date_only\\dmya_rates_answer_date_only.csv"
-}

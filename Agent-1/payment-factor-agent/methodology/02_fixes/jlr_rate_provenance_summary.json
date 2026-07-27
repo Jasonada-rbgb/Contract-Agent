@@ -1,9 +1,0 @@
-{
-  "in_scope_export_contract_payable_eur": 9389442.852307856,
-  "manual_inherited_eur": 8544160.51223727,
-  "manual_inherited_pct": 91.0,
-  "rate_derived_eur": 845282.3400705867,
-  "rate_derived_pct": 9.0,
-  "rows_capped_at_gross": 243,
-  "disclosure": "For 91% of in-scope export value the contract method equals the manual workbook rate by construction (fallback_effective_rate prefers manual when acceptance basis present). The contract-vs-manual delta can only arise on the rate_derived portion. Disclose to JLR."
-}

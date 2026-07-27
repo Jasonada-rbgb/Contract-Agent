@@ -6,20 +6,22 @@ The key point for review: the Contract Agent should determine contract eligibili
 
 ## Proposed Agent Split
 
-| Agent | Responsibility | Current evidence in this package |
+| Agent | Responsibility | Current logic in this package |
 | --- | --- | --- |
-| Fixed Acceptance Agent | Applies fixed agreed rates by product group, warranty type, year, and market. | BMW `Kostenstand`-based audit outputs and BMW dashboard extraction script |
-| Technical Factor Agent | Calculates technical acceptance factors from inspected outcomes. | JLR CAT1 / (CAT1 + CAT2 + CAT3) DMYA logic and STAR enrichment script |
-| Extrapolated Technical Factor Agent | Applies a technical factor to a broader claim population with governance checks. | JLR DMYA/PFACC application logic and resampling evidence |
+| Fixed Acceptance Agent | Applies fixed agreed rates by product group, warranty type, year, and market. | BMW `Kostenstand`-based contractual bucketing (`scripts/bmw_contractual_buckets.py`) |
+| Technical Factor Agent | Calculates technical acceptance factors from inspected outcomes. | JLR CAT1 / (CAT1 + CAT2 + CAT3) DMYA logic and STAR enrichment (`scripts/jlr_databricks_enrichment.py`, `scripts/jlr_star_dmya_answer_date_only.py`) |
+| Extrapolated Technical Factor Agent | Applies a technical factor to a broader claim population with governance checks. | JLR DMYA/PFACC application + denominator governance (`scripts/denominator_governance.py`) |
 
 ## Current Code Status
 
-This is not yet a finished production subagent implementation. The current logic exists as audit scripts and dashboard extraction scripts:
+This is not yet a finished production subagent implementation. The current logic exists as prototype/audit code:
 
-- `scripts/jlr_full_contract_audit.py` contains the clearest current payment-factor routing implementation.
-- `scripts/jlr_databricks_enrichment.py` contains Databricks enrichment logic for STAR technical rates and VIN production model year.
-- `scripts/bmw_dashboard_refresh_extract.py` contains BMW fixed-rate audit normalization and final adjusted payable output for dashboard use.
-- `scripts/bmw_jlr_dashboard_build.py` combines BMW/JLR dashboard-ready views.
+- `scripts/payment_factor_agents.py` - payment-factor agent prototype.
+- `scripts/jlr_full_contract_audit.py` - clearest current payment-factor routing implementation.
+- `scripts/jlr_contract_led_rebuild.py` - JLR contract-led rebuild logic.
+- `scripts/jlr_databricks_enrichment.py` - Databricks enrichment for STAR technical rates and VIN production model year.
+- `scripts/denominator_governance.py` - thin-sample / denominator governance.
+- `methodology/` - rule-derivation engines (see `methodology/README.md`), including re-extracting the BMW ruleset directly from the contract to prove rules are contract-driven, not hardcoded.
 
 ## Important Limitation
 
@@ -38,24 +40,17 @@ This is why the future design should treat payment factors as separate audited s
 
 ## Contents
 
-- `docs/full.md`: consolidated BMW/JLR audit context and proposed payment-factor architecture.
-- `scripts/`: current audit and dashboard scripts that contain the prototype logic.
-- `evidence/bmw/`: aggregate BMW audit summaries and decision notes.
-- `evidence/jlr/`: aggregate JLR audit summaries, DMYA breakdowns, PFACC/DMYA rate-source extracts, and resampling check.
-- `rules/jlr_claims_rules.md`: local JLR data handling rules used during the audit.
+- `docs/full.md`: consolidated BMW/JLR context and proposed payment-factor architecture.
+- `scripts/`: payment-factor agent prototype and audit/rebuild code.
+- `methodology/`: rule-derivation code (scenario engines, ruleset re-extraction, provenance flagging). See `methodology/README.md`.
+- `provenance/bmw_ruleset.json`: frozen ruleset the rules compile from.
+- `rules/`: payment-factor rules, overrides, and JLR data-handling rules used by the agent.
 
 ## Files Intentionally Excluded
 
-Large row-level claim datasets were not copied into this review folder. They include VINs, claim numbers, and high-volume claim detail, and are not needed for the technical review of the payment-factor architecture.
+This package is limited to how the agent is built and scaled. The following are deliberately not included: run outputs and aggregate summaries (`evidence/`, output `*.json`/`*.csv`), row-level claim datasets (VINs, claim numbers, high-volume detail), cost-difference and LLM cost analysis, OEM-handoff verification reports, ad-hoc profiling/validation helper scripts, dashboard-build scripts, and compiled `__pycache__/*.pyc`.
 
-Excluded examples:
-
-- BMW `final_contract_audit_row_level.csv`
-- JLR `jlr_contract_vs_manual_row_level.csv`
-- JLR `jlr_normalized_claims.csv`
-- 2025 BMW pattern candidate row-level CSVs
-
-If row-level examples are needed later, create a small redacted sample specifically for review.
+If outputs or redacted row-level samples are needed later, they are available on request.
 
 ## Suggested Build Direction
 
