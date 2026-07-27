@@ -45,6 +45,7 @@ This is why the future design should treat payment factors as separate audited s
 - `methodology/`: rule-derivation code (scenario engines, ruleset re-extraction, provenance flagging). See `methodology/README.md`.
 - `provenance/bmw_ruleset.json`: frozen ruleset the rules compile from.
 - `rules/`: payment-factor rules, overrides, and JLR data-handling rules used by the agent.
+- `skills/`: CLI-side skills and subagents used to build the agent, with a `SKILLS_USED.md` log and Copilot-adaptation notes.
 
 ## Files Intentionally Excluded
 

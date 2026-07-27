@@ -43,6 +43,15 @@ Code that shows how the rules are derived and reproduced from the Contract Agent
 - `02_fixes/jlr_rate_provenance_flag.py` - `manual_inherited` vs `rate_derived` provenance logic.
 - `02_fixes/jlr_true_contract_run.py` - independent contract-rate run (no manual inheritance).
 
+## Skills & Subagents (`skills/`)
+
+CLI-side skills and subagents used to build the agent (see `skills/SKILLS_USED.md`):
+
+- `skills/warranty-agent/` - core domain skill (agent architecture, hybrid retrieval, claims pipeline, routing).
+- `skills/databricks-pipeline/`, `python-patterns/`, `search-first/`, `security-review/`, `verification-loop/`, `continuous-learning/`, `dev-up/` - engineering/process skills applied during the build.
+- `skills/subagents/` - `planner`, `backend-builder`, `reviewer`, `verifier` role definitions.
+- `skills/SKILLS_USED.md` - which skills/subagents were used in which sessions and why, plus notes on adapting for GitHub Copilot.
+
 ## Exclusions
 
 Deliberately not included: run outputs and aggregate summaries (`evidence/`, output `*.json`/`*.csv`), row-level claim files, cost-difference analysis and LLM cost estimates, OEM-handoff verification reports, ad-hoc profiling/validation helper scripts, dashboard-build scripts, and compiled `__pycache__/*.pyc`. This keeps the package focused on how the agent is built and scaled. Outputs and a full raw re-run are available on request.
