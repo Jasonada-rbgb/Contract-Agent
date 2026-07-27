@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "generated_utc": "2026-07-20",
+  "description": "Formal payment-factor override table. Each override records the raw computed rate, the applied rate, scope, financial impact, and pallet-level evidence. Overrides are business/expert decisions that supersede computed technical factors and MUST carry evidence + confidence.",
+  "overrides": [
+    {
+      "override_id": "OVR-JLR-DMTL-MY2023",
+      "oem": "JLR",
+      "product_family": "DMTL",
+      "model_year": "2023",
+      "factor_type": "extrapolated_technical_factor",
+      "raw_computed_rate": 1.0,
+      "raw_rate_reason": "Single pallet BBTRVY = 4 CAT1 / 4 denominator = 100%; not representative.",
+      "applied_rate": 0.35,
+      "applied_rate_source": "business_confirmed",
+      "jlr_confirmation": "JLR confirmed 2026-07-20 that a DMTL manual update explains the 35%. Legitimate manual/business update, not an unexplained figure.",
+      "rows_affected": 3341,
+      "gross_eur_affected": 698719.47,
+      "financial_impact_vs_raw_100pct_eur": -454167.66,
+      "pallet_evidence": [
+        {"pallet_id": "BBTRVY", "cat1": 4, "cat2": 0, "cat3": 0, "cat4": 0, "denominator": 4, "pallet_rate": 1.0},
+        {"pallet_id": "BBVDHN", "cat1": 3, "cat2": 1, "cat3": 10, "cat4": 2, "denominator": 14, "pallet_rate": 0.2143},
+        {"pallet_id": "BBVPTZ", "cat1": 0, "cat2": 0, "cat3": 0, "cat4": 23, "denominator": 0, "pallet_rate": null}
+      ],
+      "pooled_star_rate": 0.3889,
+      "bbvdhn_only_rate": 0.2143,
+      "evidence_source": "bci_rbs_prod.raw.dxq_jlr_stars (live query 2026-07-20); see output/reverify_20260720/evidence/dmtl_my2023_pallet_star_evidence.csv",
+      "confidence": "business_confirmed",
+      "warnings": [
+        "35% is a JLR-confirmed manual update (not a pure STAR computation). Pooled STAR=38.89%, BBVDHN-only=21.43% for reference.",
+        "Third pallet BBVPTZ (23 CAT4) exists but does not affect DMYA (CAT4 excluded)."
+      ]
+    },
+    {
+      "override_id": "OVR-JLR-NGI-PENDING",
+      "oem": "JLR",
+      "product_family": "NGI",
+      "model_year": "2023+",
+      "factor_type": "extrapolated_technical_factor",
+      "status": "OPEN_NO_ADJUSTMENT",
+      "applied_rate": null,
+      "note": "Known possible resampling issue in the opposite direction. No NGI rows currently use dmya_databricks in the audited output. No override applied. Requires exact product family, model year, pallet IDs, old rate, corrected rate before any financial adjustment.",
+      "confidence": "expert_review"
+    }
+  ]
+}
