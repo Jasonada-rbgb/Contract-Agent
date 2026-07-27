@@ -1,0 +1,6 @@
+pallet_id,product_family,model_year,cat1,cat2,cat3,cat4_excluded,denominator_cat123,pallet_dmya_rate,note
+BBTRVY,DMTL,2023,4,0,0,0,4,1.0000,"Original pallet that produced raw STAR 100% (4 CAT1 / 4). Not representative per business."
+BBVDHN,DMTL,2023,3,1,10,2,14,0.2143,"Retest pallet cited in business resample note."
+BBVPTZ,DMTL,2023,0,0,0,23,0,,"All CAT4 - excluded from DMYA denominator (CAT4 not counted)."
+POOLED_ALL,DMTL,2023,7,1,10,25,18,0.3889,"Pooled across all three pallets: CAT1=7 / (7+1+10)=18 = 38.89%."
+BUSINESS_OVERRIDE,DMTL,2023,,,,,,0.3500,"Business-confirmed override applied in frozen baseline (35.00%). NOT equal to pooled STAR (38.89%) nor BBVDHN-only (21.43%). Negotiated figure - requires JLR expert confirmation."

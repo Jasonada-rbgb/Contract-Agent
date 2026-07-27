@@ -1,0 +1,9 @@
+{
+  "databricks_population_rows": 22158,
+  "thin_rows": 7383,
+  "thin_contract_payable_eur": 306553.845195167,
+  "thin_manual_eur": 311130.50297084375,
+  "thin_contract_minus_manual_eur": -4576.657775676733,
+  "non_thin_contract_payable_eur": 866011.1553405145,
+  "note": "Thin = STAR DMYA rate with denominator<10 per audited_thin_dmya_rate_denominators_lt10.csv. DMTL MY2023 (4/14 denom) is included in thin set."
+}

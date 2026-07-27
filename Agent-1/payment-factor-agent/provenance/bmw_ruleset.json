@@ -1,0 +1,170 @@
+{
+  "oem": "BMW",
+  "contract_id": "BMW",
+  "fingerprint": "e71bec717be8a433",
+  "rules": [
+    {
+      "rule_id": "R001",
+      "market": "north_america",
+      "component": "general",
+      "months": 60,
+      "mileage_limit": null,
+      "mileage_unit": "",
+      "whichever_sooner": true,
+      "date_basis": "warranty_start_date",
+      "citation": "",
+      "source_refs": [
+        "[1]",
+        "[2]",
+        "[3]"
+      ]
+    },
+    {
+      "rule_id": "R002",
+      "market": "export_market USA Kanada Puerto Rico andere L\u00e4nder",
+      "component": "general",
+      "months": 36,
+      "mileage_limit": null,
+      "mileage_unit": "",
+      "whichever_sooner": false,
+      "date_basis": "warranty_start_date",
+      "citation": "",
+      "source_refs": [
+        "[1]",
+        "[2]",
+        "[3]"
+      ]
+    },
+    {
+      "rule_id": "R003",
+      "market": "export_market USA Kanada Puerto Rico andere L\u00e4nder",
+      "component": "replacement_part_paid",
+      "months": 24,
+      "mileage_limit": null,
+      "mileage_unit": "",
+      "whichever_sooner": false,
+      "date_basis": "warranty_start_date",
+      "citation": "",
+      "source_refs": [
+        "[1]",
+        "[2]",
+        "[3]"
+      ]
+    },
+    {
+      "rule_id": "R004",
+      "market": "USA, Canada, Puerto Rico",
+      "component": "general",
+      "months": 60,
+      "mileage_limit": 150000.0,
+      "mileage_unit": "miles",
+      "whichever_sooner": true,
+      "date_basis": "warranty_start_date",
+      "citation": "In den USA, Kanada und Puerto Rico verj\u00e4hren Anspr\u00fcche mit Ablauf von 60 Monaten ab dem jeweils fr\u00fcheren Datum der Erstzulassung des Fahrzeugs oder der Fahrzeug\u00fcbergabe an den Endkunden bzw. nach 150.000 Meilen, wenn diese zu einem fr\u00fcheren Zeitpunkt erreicht sind.",
+      "source_refs": [
+        "[1]",
+        "[2]",
+        "[3]"
+      ]
+    },
+    {
+      "rule_id": "R005",
+      "market": "All other countries (outside USA, Canada, Puerto Rico)",
+      "component": "general",
+      "months": 36,
+      "mileage_limit": null,
+      "mileage_unit": "",
+      "whichever_sooner": false,
+      "date_basis": "warranty_start_date",
+      "citation": "In allen anderen L\u00e4ndern verj\u00e4hren Anspr\u00fcche mit Ablauf von 36 Monaten ab dem jeweils fr\u00fcheren Datum der Erstzulassung des Fahrzeugs oder der Fahrzeug\u00fcbergabe an den Endkunden.",
+      "source_refs": [
+        "[1]",
+        "[2]",
+        "[3]"
+      ]
+    },
+    {
+      "rule_id": "R006",
+      "market": "All other countries (outside USA, Canada, Puerto Rico)",
+      "component": "general - extended supplier liability",
+      "months": 24,
+      "mileage_limit": null,
+      "mileage_unit": "",
+      "whichever_sooner": false,
+      "date_basis": "warranty_start_date",
+      "citation": "Soweit BMW in allen anderen L\u00e4ndern au\u00dferhalb USA, Kanada und Puerto Rico bis zu 24 Monate nach Eintritt der voran genannten Verj\u00e4hrungsfrist (von 36 Monaten) Kosten f\u00fcr den Austausch mangelhafter Produkte \u00fcbernimmt, leistet der Lieferant gegen\u00fcber BMW in dem entsprechenden Umfang Ersatz.",
+      "source_refs": [
+        "[1]",
+        "[2]",
+        "[3]"
+      ]
+    },
+    {
+      "rule_id": "R007",
+      "market": "all",
+      "component": "paid spare part installation (kostenpflichtiger Ersatzteileinbau)",
+      "months": 24,
+      "mileage_limit": null,
+      "mileage_unit": "",
+      "whichever_sooner": false,
+      "date_basis": "warranty_start_date",
+      "citation": "F\u00fcr im Rahmen eines f\u00fcr den Endkunden kostenpflichtigen Ersatzteileinbaus verwendete Produkte verj\u00e4hren die mit Ablauf von 24 Monaten ab dem Datum des Ersatzteileeinbaus bzw. \u00dcbergabe des Ersatzteils an den Endkunden.",
+      "source_refs": [
+        "[1]",
+        "[2]",
+        "[3]"
+      ]
+    },
+    {
+      "rule_id": "R008",
+      "market": "all",
+      "component": "Hochvoltspeicher (high-voltage battery / energy storage for electric drive)",
+      "months": 96,
+      "mileage_limit": 160000.0,
+      "mileage_unit": "km",
+      "whichever_sooner": true,
+      "date_basis": "warranty_start_date",
+      "citation": "Ist das gelieferte Produkt ein Hochvoltspeicher... verj\u00e4hren die Sachm\u00e4ngelanspr\u00fcche (f\u00fcr alle ab 01.01.2022 gelieferten Produkte) mit Ablauf von 96 Monaten oder 160.000 km, je nachdem welcher Fall fr\u00fcher eintritt",
+      "source_refs": [
+        "[1]",
+        "[2]",
+        "[3]"
+      ]
+    },
+    {
+      "rule_id": "R009",
+      "market": "all",
+      "component": "general - absolute maximum limitation",
+      "months": 120,
+      "mileage_limit": null,
+      "mileage_unit": "",
+      "whichever_sooner": false,
+      "date_basis": "warranty_start_date",
+      "citation": "Auch in den F\u00e4llen Ziff. 2.3 oder 2.4 oder 6.2 k\u00f6nnen 10 Jahre nach Lieferung an die BMW Group keine Anspr\u00fcche nach dieser Gew\u00e4hrleistungsvereinbarung mehr geltend gemacht werden.",
+      "source_refs": [
+        "[1]",
+        "[2]",
+        "[3]"
+      ]
+    }
+  ],
+  "exclusions": [
+    "Lieferungen aus den Unternehmensbereichen Gebrauchsg\u00fcter, Geb\u00e4udetechnik und Industrietechnik des Auftragnehmers [1,2]",
+    "Separate Lieferungen von Software f\u00fcr nicht vom Lieferanten gelieferte Hardware [2]",
+    "Anspr\u00fcche wegen Personen- und/oder Sachsch\u00e4den Dritter ('Produkthaftung') bleiben unber\u00fchrt [2]",
+    "Fehler zur\u00fcckzuf\u00fchren auf Verletzung von Bedienungs-, Wartung- und Einbauvorschriften, ungeeignete oder unsachgem\u00e4\u00dfe Verwendung oder auf fehlerhafte, unsachgem\u00e4\u00dfe oder nachl\u00e4ssige Behandlung und nat\u00fcrlichen Verschlei\u00df [8]",
+    "Failure to follow maintenance and installation instructions (Wartung- und Einbauvorschriften)",
+    "Unsuitable or improper use (ungeeignete oder unsachgem\u00e4\u00dfe Verwendung)",
+    "Faulty, improper or negligent handling (fehlerhafte, unsachgem\u00e4\u00dfe oder nachl\u00e4ssige Behandlung)",
+    "Natural wear and tear (nat\u00fcrlicher Verschlei\u00df)",
+    "Consumer goods division (Gebrauchsg\u00fcter)",
+    "Building technology (Geb\u00e4udetechnik)",
+    "Industrial technology (Industrietechnik)",
+    "Samples/prototypes (Muster)"
+  ],
+  "wear_and_tear_examples": [
+    "nat\u00fcrlicher Verschlei\u00df (natural wear and tear)"
+  ],
+  "compiled_at": "2026-06-15T09:28:30.172292+00:00",
+  "source": "compiled_profile"
+}

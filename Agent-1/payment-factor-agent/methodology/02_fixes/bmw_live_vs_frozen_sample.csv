@@ -1,0 +1,41 @@
+claim_number,frozen_ai_decision,frozen_contract_warranty_type,live_decision,live_reason
+386245332,out_of_warranty,extended_gw,out_of_warranty,Germany falls under 'all other countries' with 36-month limitation [2][3]. Warranty ended 2024-08-06; repair on 2025-11-21 is beyond the period.
+380065360,out_of_warranty,extended_gw,out_of_warranty,"Germany falls under 'all other countries' with 36-month limitation ([2],[3]). Repair on 2025-06-20 is beyond warranty end 2025-06-16, so time expired. No mileage limit applies."
+381962343,out_of_warranty,extended_gw,out_of_warranty,Germany falls under 'all other countries' with 36-month limitation [2][3]. Warranty ended 2024-08-06; repair on 2025-11-21 is beyond the period.
+372079499,out_of_warranty,extended_gw,out_of_warranty,Germany falls under 'all other countries' with 36-month limitation [2][3]. Warranty ended 2024-08-06; repair on 2025-11-21 is beyond the period.
+383313408,out_of_warranty,extended_gw,out_of_warranty,Germany falls under 'all other countries' with a 36-month limitation period [2][3]. Warranty ended 2024-09-03; repair on 2025-03-12 is beyond this period.
+373157536,out_of_warranty,extended_gw,in_warranty,Repair date is within 60 months and mileage is within the applicable limit. [1] [2] [3]
+374354279,out_of_warranty,extended_gw,out_of_warranty,AE is an 'all other countries' market with a 36-month limitation period [2][3]. Warranty ended 2023-09-27; repair on 2025-03-12 is well beyond this period.
+387087331,out_of_warranty,extended_gw,out_of_warranty,"CH is an 'all other countries' market with a 36-month general limitation period ([2],[3]). Warranty ended 2025-03-31, but repair occurred 2025-12-22, beyond the period. No mileage limit applies."
+386798566,out_of_warranty,extended_gw,out_of_warranty,Repair date or mileage falls outside the applicable warranty rule. [1] [2] [3]
+382570267,out_of_warranty,extended_gw,out_of_warranty,"Panama = 'alle anderen Länder' with 36-month period ([2],[3]); repair on 2025-09-13 is after warranty end 2025-08-31."
+384072904,out_of_warranty,extended_gw,out_of_warranty,"AE is an 'all other countries' market with a 36-month limitation period (no mileage limit) per [2]/[3]. Repair on 2025-10-18 is ~38 months after warranty start 2022-08-19, exceeding 36 months."
+384223105,out_of_warranty,extended_gw,out_of_warranty,AE is an 'all other countries' market with a 36-month limitation period [2][3]. Warranty ended 2025-09-07; repair on 2025-10-17 is beyond 36 months. No mileage limit applies for this market.
+383038924,out_of_warranty,extended_gw,out_of_warranty,"AE is 'alle anderen Länder' with a 36-month limitation (no mileage cap) per [2][3]. Repair on 2025-09-17 is ~39 months after start 2022-06-22, exceeding warranty end 2025-06-22."
+386404081,out_of_warranty,extended_gw,out_of_warranty,Belgium falls under 'alle anderen Länder' with a 36-month limitation period [2][3]. Warranty ended 2024-01-28; repair on 2025-12-05 is far outside the period.
+378277312,out_of_warranty,extended_gw,out_of_warranty,Kuwait is an 'all other countries' market with 36-month limitation [2][3]. Warranty ended 2024-09-07; repair on 2025-06-04 is beyond the period.
+380659924,out_of_warranty,extended_gw,out_of_warranty,AE is an 'all other countries' market with a 36-month limitation period [2][3]. Warranty ended 2023-09-27; repair on 2025-03-12 is well beyond this period.
+376934252,out_of_warranty,extended_gw,out_of_warranty,"Qatar falls under 'alle anderen Länder' with a 36-month limitation period [2][3]. Repair on 2025-05-10 is ~38 months after start 2022-02-27, exceeding the 36-month warranty ending 2025-02-27."
+381773992,out_of_warranty,extended_gw,in_warranty,Repair date is within 60 months and mileage is within the applicable limit. [1] [2] [3]
+386510725,out_of_warranty,extended_gw,out_of_warranty,France is an 'all other countries' market with 36-month limitation [2][3]. Warranty ended 2024-03-24; repair on 2025-12-10 is beyond period.
+377610799,out_of_warranty,extended_gw,out_of_warranty,"Qatar falls under 'all other countries' with a 36-month limit (passage [2],[3]). Warranty ended 2024-08-11; repair on 2025-05-25 is beyond the period."
+377167226,out_of_warranty,extended_gw,out_of_warranty,"Qatar falls under 'all other countries' with a 36-month limit (passage [2],[3]). Warranty ended 2024-08-11; repair on 2025-05-25 is beyond the period."
+371181358,out_of_warranty,extended_gw,out_of_warranty,"GB is an 'all other countries' market with a 36-month general warranty ([2],[3]). Repair occurred ~44 months after warranty start, exceeding the limit. No mileage cap applies for this market."
+381975198,out_of_warranty,extended_gw,out_of_warranty,"NZ is an 'all other countries' market with a 36-month limitation period and no mileage cap [2][3]. Repair on 2025-08-28 is ~41 months after warranty start 2022-03-17, exceeding 36 months."
+372546875,out_of_warranty,extended_gw,out_of_warranty,"Switzerland falls under 'alle anderen Länder' with a 36-month limitation period [2]. Repair occurred ~45 months after warranty start, exceeding 36 months."
+384568957,out_of_warranty,extended_gw,out_of_warranty,"France = all other countries, 36-month period per [2][3]. Warranty ended 2023-11-16 but repair occurred 2025-10-29, ~59 months after start, well outside the period."
+375696395,out_of_warranty,extended_gw,out_of_warranty,"Qatar falls under 'all other countries' with a 36-month limit (passage [2],[3]). Warranty ended 2024-08-11; repair on 2025-05-25 is beyond the period."
+372023949,out_of_warranty,extended_gw,out_of_warranty,Repair date or mileage falls outside the applicable warranty rule. [1] [2] [3]
+377365053,out_of_warranty,extended_gw,out_of_warranty,"GB is an 'all other countries' market with a 36-month general warranty ([2],[3]). Repair occurred ~44 months after warranty start, exceeding the limit. No mileage cap applies for this market."
+385747103,out_of_warranty,extended_gw,out_of_warranty,GB falls under 'all other countries' with a 36-month limitation period [2][3]. Warranty ended 2025-10-31; repair on 2025-11-25 is beyond the period.
+381653919,out_of_warranty,extended_gw,in_warranty,Repair date is within 60 months and mileage is within the applicable limit. [1] [2] [3]
+383480302,out_of_warranty,extended_gw,out_of_warranty,"GB is an 'all other countries' market with a 36-month general warranty ([2],[3]). Repair occurred ~44 months after warranty start, exceeding the limit. No mileage cap applies for this market."
+374749594,out_of_warranty,extended_gw,in_warranty,Repair date is within 60 months and mileage is within the applicable limit. [1] [2] [3]
+372290195,out_of_warranty,extended_gw,out_of_warranty,AT is an 'all other countries' market with a 36-month limitation period [2][3]. Warranty ended 2024-11-30; repair on 2025-02-05 falls after this period.
+384290331,out_of_warranty,extended_gw,out_of_warranty,"Poland falls under 'alle anderen Länder' with a 36-month limitation ([2],[3]). Warranty ended 2025-07-29; repair on 2025-10-24 is beyond the period. No mileage limit applies."
+371100361,out_of_warranty,extended_gw,out_of_warranty,"Australia falls under 'all other countries' with a 36-month limitation period and no mileage limit [2][3]. Repair on 2025-01-03 is ~48 months after warranty start 2020-12-29, exceeding the 36-month period. Warranty ended 2023-12-29."
+379123965,out_of_warranty,extended_gw,out_of_warranty,"Poland falls under 'alle anderen Länder' with a 36-month limitation ([2],[3]). Warranty ended 2025-07-29; repair on 2025-10-24 is beyond the period. No mileage limit applies."
+381974128,out_of_warranty,extended_gw,out_of_warranty,AU is an 'all other countries' market with a 36-month general limitation period [2][3]. Warranty ended 2025-08-02; repair on 2025-08-12 is after expiry. No mileage limit applies.
+371654786,out_of_warranty,extended_gw,in_warranty,Repair date is within 60 months and mileage is within the applicable limit. [1] [2] [3]
+385137882,out_of_warranty,extended_gw,out_of_warranty,"GB is an 'all other countries' market with a 36-month general warranty ([2],[3]). Repair occurred ~44 months after warranty start, exceeding the limit. No mileage cap applies for this market."
+371932716,out_of_warranty,extended_gw,in_warranty,Repair date is within 60 months and mileage is within the applicable limit. [1] [2] [3]

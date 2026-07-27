@@ -1,0 +1,63 @@
+{
+  "pinned_utc": "2026-07-20",
+  "authoritative_runs": {
+    "bmw": "C:\\Users\\ADJ1DE\\Documents\\Agent Workflow\\output\\bmw_edc_claims_eval_verified_20260701",
+    "jlr": "C:\\Users\\ADJ1DE\\Documents\\Agent Workflow\\output\\jlr_contract_audit_full_20260713_audited_dmya_resample_override"
+  },
+  "bmw": {
+    "rows_evaluated": 311968,
+    "manual_comparable_value": 42984601.3629621,
+    "contract_method_payable_value": 40499031.91456881,
+    "delta_contract_minus_manual_comparable": -2485569.448393286,
+    "corrected_manual_total_ausgrenzen_x": 42803546.350222,
+    "corrected_contract_total_ausgrenzen_x": 41154685.787175,
+    "corrected_delta_ausgrenzen_x": -1648860.563047,
+    "row_count_reconciliation": {
+      "manifest_rows": 311977,
+      "evaluated_rows": 311968,
+      "gap": 9,
+      "explanation": "8 rows dropped in 2024 MA-100 (Kopie von...Neuschuetz_01.xlsx) + 1 row in 2025 20260505_JEA_Bosch_sent.xlsx during normalization (empty/invalid rows). Immaterial. verification_report.json row_count_mismatches=[]."
+    },
+    "four_eyes": {
+      "endpoint": "databricks-claude-opus-4-8",
+      "groups_requested": 25,
+      "groups_reviewed": 25,
+      "path": "output\\bmw_edc_claims_eval_verified_20260701\\final_contract_audit\\grouped_llm_four_eyes_review.csv",
+      "verdict_counts": {
+        "needs_bmw_expert": 25
+      }
+    }
+  },
+  "jlr": {
+    "rows_loaded": 433961,
+    "workbooks_processed": 18,
+    "manual_final_recovery_eur": 10122393.314831838,
+    "contract_method_payable_eur": 10150103.080814522,
+    "manual_minus_contract_in_scope_eur": -27709.76598268452,
+    "dmtl_override": {
+      "product_family": "DMTL",
+      "model_year": "2023",
+      "old_rate": 1.0,
+      "new_rate": 0.35,
+      "rows_affected": 3341,
+      "gross_eur_affected": 698719.47,
+      "manual_eur_affected": 244526.3,
+      "contract_eur_affected": 244551.81,
+      "manual_minus_contract_eur_affected": -25.51
+    },
+    "ngi_status": "No NGI rows currently use dmya_databricks/corrected Databricks rate in this output; exact NGI resample rate/pallet evidence still needed before applying an override.",
+    "market_scope_manual_eur": {
+      "export_market": 9361733.08632517,
+      "sample_market": 760660.2285066693
+    },
+    "market_scope_contract_eur": {
+      "export_market": 9389442.852307856,
+      "sample_market": 760660.2285066693
+    }
+  },
+  "combined": {
+    "manual_payable_eur": 52925939.66505384,
+    "contract_payable_eur": 51304788.867989525,
+    "delta_contract_minus_manual_eur": -1621150.7970643118
+  }
+}

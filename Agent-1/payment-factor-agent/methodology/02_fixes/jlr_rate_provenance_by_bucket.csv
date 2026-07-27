@@ -1,0 +1,10 @@
+contract_reason_bucket,rate_provenance,rows,contract_payable_eur
+dmya,manual_inherited,59588,6425619.630087862
+dmya,rate_derived,141010,0.0
+dmya_databricks,manual_inherited,4236,327282.66046509566
+dmya_databricks,rate_derived,17922,845282.3400705858
+not_bosch_or_not_identified,rate_derived,16070,0.0
+pfacc_or_sample,manual_inherited,15897,1791258.2216843124
+pfacc_or_sample,rate_derived,87965,0.0
+pfacc_or_sample_missing_rate,rate_derived,10,0.0
+rb_warranty_exclusion,rate_derived,13407,0.0

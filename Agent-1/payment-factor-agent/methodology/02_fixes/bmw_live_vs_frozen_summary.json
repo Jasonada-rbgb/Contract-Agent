@@ -1,0 +1,12 @@
+{
+  "sample_n": 40,
+  "endpoint": "databricks-claude-opus-4-8",
+  "live_query_performed": true,
+  "warnings": [],
+  "decision_agreement_with_frozen": 34,
+  "agreement_rate": 0.85,
+  "live_decision_counts": {
+    "out_of_warranty": 34,
+    "in_warranty": 6
+  }
+}

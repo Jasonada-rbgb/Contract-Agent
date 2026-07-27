@@ -1,0 +1,21 @@
+{
+  "population_rows": 22158,
+  "frozen_contract_payable_on_population_eur": 1172565.0005356818,
+  "bases": {
+    "answer_only": {
+      "contract_payable_on_population_eur": 1626732.6568298307,
+      "delta_vs_frozen_eur": 454167.6562941489,
+      "rate_keys_available": 78
+    },
+    "both_dates": {
+      "contract_payable_on_population_eur": 1634270.7131207474,
+      "delta_vs_frozen_eur": 461705.7125850655,
+      "rate_keys_available": 78
+    },
+    "created_only": {
+      "contract_payable_on_population_eur": 1668100.2001158874,
+      "delta_vs_frozen_eur": 495535.1995802056,
+      "rate_keys_available": 81
+    }
+  }
+}
