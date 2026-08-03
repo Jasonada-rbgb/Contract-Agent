@@ -511,6 +511,35 @@ JLR:
 - `output/jlr_contract_audit_full_20260710_databricks_star_answer_enrichment/production_model_year_by_vin.csv`
 - `output/jlr_contract_audit_full_20260710_databricks_star_answer_enrichment/dmya_rates_answer_only_hybrid_from_2023.csv`
 
+## Mercedes-Benz GALA Compile-Once Design
+
+Mercedes-Benz is represented as two linked evidence sources: the main MBC
+contract decides standard non-GALA eligibility, while signed GALA agreements
+are compiled once into a deterministic, per-family quantity-acceptance matrix.
+
+The matrix uses a strict family-first join, a supplier-plus-part fallback, and
+agreement-specific temporal gates. A valid Quote sets accepted quantity:
+
+```text
+accepted quantity = replaced quantity apportioned × Quote%
+```
+
+It does not establish a cost base. Any calculated cost is reference-only and
+must not be reported as a settlement or saving; SRS remains the financial
+system of record.
+
+GALA no-match, temporal-gate failure, and undetermined Quotes deliberately
+return to main-contract handling or review. This avoids manufacturing a rate
+from a broad supplier match. Runtime precedence is:
+
+```text
+signed GALA matrix -> approved expiring learned rule -> grouped main-contract review
+```
+
+The local Luna execution is pending workstation Codex connectivity. No MBC
+cost-saving result is published by this package. See
+`mbc_gala_methodology.md` for source ownership and validation details.
+
 ## Open Items
 
 BMW:

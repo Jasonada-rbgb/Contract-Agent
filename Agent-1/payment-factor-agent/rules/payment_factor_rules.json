@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0",
-  "generated_utc": "2026-07-20",
-  "description": "Formal payment-factor rules artifact. Separates contract eligibility rules (with clause provenance) from payment-factor definitions. Sourced from frozen bmw_ruleset.json and JLR audit method. Replaces behavioural-only provenance.",
+  "schema_version": "1.1",
+  "generated_utc": "2026-08-03",
+  "description": "Formal payment-factor rules artifact. Separates contract eligibility rules from payment-factor definitions. Covers BMW, JLR, and the MBC signed-GALA agreement overlay without embedding protected contract content or claim data.",
   "oems": {
     "BMW": {
       "factor_type": "fixed_acceptance",
@@ -48,6 +48,38 @@
         "DMTL MY2023 35% is business-negotiated, not STAR-derived (pooled STAR=38.89%, BBVDHN-only=21.43%). Confirm.",
         "NGI resample: exact product/rate/pallet evidence needed before any adjustment.",
         "Confirm answer-date-only is the agreed DMYA date basis (created_only would raise payable up to ~EUR41k on the databricks population)."
+      ]
+    },
+    "MBC": {
+      "factor_type": "fixed_acceptance",
+      "rate_source": "GALA_signed_matrix",
+      "contract_routing": {
+        "primary_eligibility_source": "Mercedes-Benz main-contract bundle",
+        "agreement_overlay": "GALA compiled rule matrix",
+        "precedence": ["signed_gala_matrix", "approved_learned_rule", "grouped_contract_review"],
+        "no_gala_match_or_gate_block": "return to main-contract eligibility; do not infer a GALA rate"
+      },
+      "matrix_contract": {
+        "schema": "flat per-family rule; source files and matrix values remain in approved Contract Agent storage",
+        "match_priority": ["part_family_number", "supplier_number plus part_number"],
+        "temporal_gates": ["inclusive Anfallsjahr receipt-year gate", "vehicle production window where provided"],
+        "undetermined_quote": "requires_review",
+        "matrix_provenance": "compiler input, source filename, matrix fingerprint, compiler version"
+      },
+      "rate_basis": {
+        "semantic": "quantity apportionment",
+        "formula": "accepted_quantity = replaced_quantity_apportioned x Quote percent",
+        "missing_replaced_quantity": "default 1.0",
+        "cost_treatment": "reference-only analytical metadata; downstream SRS is the financial system of record"
+      },
+      "grouping_and_learning": {
+        "reusable_base_contract_key": ["contract_type", "technical_warranty_type_tga", "division", "production_to_repair_cap"],
+        "exclude_from_group_key": "part family for non-GALA main-contract decisions",
+        "cache_governance": "signed matrix always wins; learned rules expire and require provenance"
+      },
+      "open_expert_questions": [
+        "Validate the inclusive interpretation of Anfallsjahr NNNNff with MBC business owners.",
+        "Approve any promotion of grouped model outcomes into the learned-rule cache."
       ]
     }
   }

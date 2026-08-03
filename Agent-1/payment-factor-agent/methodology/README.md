@@ -6,8 +6,11 @@ build/derivation logic — output data, evidence, cost analysis, and OEM-handoff
 reports are not included here (this package is about how the agent is built and
 scaled, not about specific run outputs or cost differences).
 
-The frozen source artifact the rules compile from is
-`../provenance/bmw_ruleset.json` (fingerprint `e71bec717be8a433`).
+The frozen source artifact the BMW rules compile from is
+`../provenance/bmw_ruleset.json` (fingerprint `e71bec717be8a433`). Mercedes-Benz
+GALA rules are supplied at run time as an approved, fingerprinted matrix from
+the Contract Agent; the proprietary source agreements and matrix values do not
+belong in this repository.
 
 ## Derivation / reproduction engines
 
@@ -18,6 +21,7 @@ The frozen source artifact the rules compile from is
 | `01_reproduced/jlr_scenario_engine.py` | Deterministic JLR scenario engine. |
 | `01_reproduced/jlr_datebasis_sensitivity.py` | DMYA date-basis sensitivity logic. |
 | `01_reproduced/jlr_thin_denominator_exposure.py` | Thin-denominator governance exposure logic. |
+| `01_reproduced/mbc_gala_scenario_engine.py` | Portable signed-GALA matching, temporal-gate, and quantity-apportionment validation. |
 | `02_fixes/bmw_reextract_ruleset.py` | Re-extract the BMW ruleset directly from the contract (caches bypassed) to prove rules are contract-driven, not hardcoded. |
 | `02_fixes/bmw_live_contract_query_sample.py` | Sample live contract-query verification against the agent. |
 | `02_fixes/bmw_live_full_population.py` | Full-population live contract-query driver. |

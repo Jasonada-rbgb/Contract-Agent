@@ -6,6 +6,7 @@ percentage with provenance. Rates come from structured sources (Kostenstand,
 STAR/DMYA, PFACC) plus governance + overrides — never hardcoded content.
 
     Fixed Acceptance Agent          -> BMW Kostenstand fixed rates
+    GALA Quote Acceptance Agent     -> MBC signed-agreement quantity quote
     Technical Factor Agent          -> JLR STAR CAT1/(CAT1+CAT2+CAT3)
     Extrapolated Technical Factor   -> JLR DMYA/PFACC applied to wider population
 
@@ -18,7 +19,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from denominator_governance import govern_technical_factor
 
@@ -26,7 +27,7 @@ from denominator_governance import govern_technical_factor
 @dataclass
 class FactorResult:
     factor_type: str
-    rate: Optional[float]
+    rate: float | None
     rate_source: str
     rate_basis: str
     source_reference: str
@@ -64,11 +65,38 @@ class FixedAcceptanceAgent:
         )
 
 
+class GalaQuoteAcceptanceAgent:
+    """MBC: expose a signed GALA Quote as a quantity acceptance factor.
+
+    Matrix matching and temporal routing occur in the Contract Agent first.  A
+    caller may invoke this agent only with a matched, temporally valid matrix
+    rule.  The resulting rate applies to replaced quantity, not to a cost base.
+    """
+
+    def factor(self, *, acceptance_rate_percent: float | None, source_ref: str) -> FactorResult:
+        """Return the quote factor or route an undetermined Quote to review."""
+        if acceptance_rate_percent is None:
+            return FactorResult(
+                "fixed_acceptance", None, "GALA_signed_matrix", "Quote undetermined",
+                source_ref, "expert_review", ["GALA Quote is k.A.; manual review is required."],
+            )
+        if not 0 <= acceptance_rate_percent <= 100:
+            return FactorResult(
+                "fixed_acceptance", None, "GALA_signed_matrix", "invalid Quote",
+                source_ref, "expert_review", ["GALA Quote must be between 0 and 100 percent."],
+            )
+        return FactorResult(
+            "fixed_acceptance", acceptance_rate_percent / 100.0, "GALA_signed_matrix",
+            "quantity apportionment: replaced quantity x Quote", source_ref, "high",
+            ["This is not a monetary payment rate; SRS owns authoritative settlement cost."],
+        )
+
+
 class TechnicalFactorAgent:
     """JLR: technical acceptance factor from STAR outcomes, with denominator governance."""
 
     def factor(self, *, cat1: int, cat2: int, cat3: int, product_family: str, model_year: str,
-               source_ref: str, fallback_rate: Optional[float] = None) -> FactorResult:
+               source_ref: str, fallback_rate: float | None = None) -> FactorResult:
         denom = cat1 + cat2 + cat3
         computed = (cat1 / denom) if denom else None
         gov = govern_technical_factor(
@@ -89,7 +117,7 @@ class ExtrapolatedTechnicalFactorAgent:
         self._overrides = overrides
 
     def factor(self, *, cat1: int, cat2: int, cat3: int, product_family: str, model_year: str,
-               source_ref: str, fallback_rate: Optional[float] = None) -> FactorResult:
+               source_ref: str, fallback_rate: float | None = None) -> FactorResult:
         denom = cat1 + cat2 + cat3
         computed = (cat1 / denom) if denom else None
         ov = self._overrides.get((product_family.upper(), str(model_year)))

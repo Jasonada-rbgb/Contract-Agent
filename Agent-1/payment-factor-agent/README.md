@@ -9,6 +9,7 @@ The key point for review: the Contract Agent should determine contract eligibili
 | Agent | Responsibility | Current logic in this package |
 | --- | --- | --- |
 | Fixed Acceptance Agent | Applies fixed agreed rates by product group, warranty type, year, and market. | BMW `Kostenstand`-based contractual bucketing (`scripts/bmw_contractual_buckets.py`) |
+| GALA Quote Acceptance Agent | Applies a signed agreement Quote to replaced quantity after deterministic agreement routing. | Mercedes-Benz GALA compiled matrix; true cost remains in SRS. |
 | Technical Factor Agent | Calculates technical acceptance factors from inspected outcomes. | JLR CAT1 / (CAT1 + CAT2 + CAT3) DMYA logic and STAR enrichment (`scripts/jlr_databricks_enrichment.py`, `scripts/jlr_star_dmya_answer_date_only.py`) |
 | Extrapolated Technical Factor Agent | Applies a technical factor to a broader claim population with governance checks. | JLR DMYA/PFACC application + denominator governance (`scripts/denominator_governance.py`) |
 
@@ -17,6 +18,8 @@ The key point for review: the Contract Agent should determine contract eligibili
 This is not yet a finished production subagent implementation. The current logic exists as prototype/audit code:
 
 - `scripts/payment_factor_agents.py` - payment-factor agent prototype.
+- `docs/mbc_gala_methodology.md` - Mercedes-Benz main-contract/GALA routing, compile-once, grouping, and cache governance.
+- `methodology/01_reproduced/mbc_gala_scenario_engine.py` - portable deterministic GALA validation engine.
 - `scripts/jlr_full_contract_audit.py` - clearest current payment-factor routing implementation.
 - `scripts/jlr_contract_led_rebuild.py` - JLR contract-led rebuild logic.
 - `scripts/jlr_databricks_enrichment.py` - Databricks enrichment for STAR technical rates and VIN production model year.
@@ -35,6 +38,11 @@ They also need structured external sources:
 - IQM production model year,
 - workbook flags such as OTP, RB warranty status, exclusion bits,
 - approved business overrides and resampling decisions.
+
+For Mercedes-Benz, the main contract selects standard eligibility while signed
+GALA agreements provide an additional deterministic quantity-acceptance source.
+Claims not covered by a valid GALA rule return to the main-contract route; they
+must not receive an inferred GALA Quote.
 
 This is why the future design should treat payment factors as separate audited services/subagents with explicit source provenance.
 
@@ -62,6 +70,7 @@ Normalized claim
   -> Contract Eligibility Agent
   -> Payment Factor Router
       -> Fixed Acceptance Agent
+      -> GALA Quote Acceptance Agent (when signed agreement matches)
       -> Technical Factor Agent
       -> Extrapolated Technical Factor Agent
   -> Final payable amount with rate provenance
@@ -73,8 +82,8 @@ Minimum output contract for each factor agent:
 {
   "factor_type": "fixed_acceptance | technical_factor | extrapolated_technical_factor",
   "rate": 0.35,
-  "rate_source": "Kostenstand | PFACC | DMYA | STAR | side_letter | manual_override",
-  "rate_basis": "standard_gw | extended_gw | spatausfall | CAT1/(CAT1+CAT2+CAT3)",
+  "rate_source": "Kostenstand | GALA_signed_matrix | PFACC | DMYA | STAR | side_letter | manual_override",
+  "rate_basis": "standard_gw | extended_gw | quantity apportionment | CAT1/(CAT1+CAT2+CAT3)",
   "source_reference": "workbook/sheet/table/query/pallet/rate-row",
   "confidence": "high | medium | low | expert_review",
   "warnings": []
