@@ -24,6 +24,7 @@ logic remains prototype/audit code, now alongside an additive portable core:
 
 - `scripts/payment_factor_agents.py` - payment-factor agent prototype.
 - `docs/mbc_gala_methodology.md` - Mercedes-Benz main-contract/GALA routing, compile-once, grouping, and cache governance.
+- `docs/contract_asset_pipeline.md` - reusable ingestion and compile-once method for large structured agreement sets.
 - `methodology/01_reproduced/mbc_gala_scenario_engine.py` - portable deterministic GALA validation engine.
 - `scripts/jlr_full_contract_audit.py` - clearest current payment-factor routing implementation.
 - `scripts/jlr_contract_led_rebuild.py` - JLR contract-led rebuild logic.
@@ -57,6 +58,7 @@ This is why the future design should treat payment factors as separate audited s
 - `scripts/`: payment-factor agent prototype and audit/rebuild code.
 - `methodology/`: rule-derivation code (scenario engines, ruleset re-extraction, provenance flagging). See `methodology/README.md`.
 - `payment_factor_core/` and `profiles/`: portable core and declarative contract profiles. See `docs/portable_core.md`.
+- `docs/contract_asset_pipeline.md`: source-neutral ingestion, compilation, validation and asset-publication methodology for large agreement sets.
 - `provenance/bmw_ruleset.json`: frozen ruleset the rules compile from.
 - `rules/`: payment-factor rules, overrides, and JLR data-handling rules used by the agent.
 - `skills/`: CLI-side skills and subagents used to build the agent, with a `SKILLS_USED.md` log and Copilot-adaptation notes.

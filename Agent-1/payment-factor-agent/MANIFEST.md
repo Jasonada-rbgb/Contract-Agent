@@ -10,6 +10,7 @@ cost-difference analysis, and OEM-handoff reports are intentionally excluded.
 - `docs/full.md` - methodology narrative, open items, and payment-factor agent proposal / recommended architecture.
 - `docs/mbc_gala_methodology.md` - MBC main-contract/GALA routing, compile-once matrix governance, and grouped-review safeguards.
 - `docs/portable_core.md` - portable-core boundary, migration status and host integration contract.
+- `docs/contract_asset_pipeline.md` - reusable large-agreement ingestion, compilation, validation and governed-asset publication methodology.
 
 ## Portable Core & Profiles
 
