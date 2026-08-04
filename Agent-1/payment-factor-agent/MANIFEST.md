@@ -9,6 +9,13 @@ cost-difference analysis, and OEM-handoff reports are intentionally excluded.
 - `README.md` - technical review guide for this package.
 - `docs/full.md` - methodology narrative, open items, and payment-factor agent proposal / recommended architecture.
 - `docs/mbc_gala_methodology.md` - MBC main-contract/GALA routing, compile-once matrix governance, and grouped-review safeguards.
+- `docs/portable_core.md` - portable-core boundary, migration status and host integration contract.
+
+## Portable Core & Profiles
+
+- `payment_factor_core/` - source-neutral profile resolution, deterministic-first routing, learned-cache contract, grouping key generation and configurable tabular-matrix evaluator.
+- `profiles/mbc.json` - functional MBC GALA-overlay profile. The signed matrix remains a governed runtime asset.
+- `profiles/bmw.json`, `profiles/jlr.json` - starter routing profiles. Existing BMW/JLR audit logic remains authoritative until its adapters are separately migrated and regression-tested.
 
 ## Rules Artifacts
 

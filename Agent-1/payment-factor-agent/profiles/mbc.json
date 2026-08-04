@@ -1,0 +1,56 @@
+{
+  "profile_id": "mbc-main-contract-gala-overlay-v1",
+  "oem_aliases": ["MBC", "MERCEDES-BENZ", "MERCEDES"],
+  "contract_ids": ["AUTO", "MERCEDESBENZ"],
+  "deterministic_plugins": ["tabular_acceptance_matrix"],
+  "grouping_fields": [
+    "contract_type",
+    "technical_warranty_type_tga",
+    "division",
+    "production_to_repair_cap",
+    "warranty_start_date",
+    "repair_date"
+  ],
+  "asset_refs": {
+    "main_contract": "governed contract bundle configured by the host application",
+    "signed_gala_matrix": "governed, approved matrix configured by the host application"
+  },
+  "plugin_settings": {
+    "tabular_acceptance_matrix": {
+      "matrix_asset": "signed_gala_matrix",
+      "rate_field": "acceptance_rate_percent",
+      "source_reference_field": "source_filename",
+      "match_steps": [
+        {
+          "name": "part_family_number",
+          "mode": "any",
+          "claim_fields": ["part_family_number"],
+          "rule_fields": ["part_family_numbers"]
+        },
+        {
+          "name": "supplier_part_number",
+          "mode": "all",
+          "claim_fields": ["supplier_number", "part_number"],
+          "rule_fields": ["supplier_numbers", "part_numbers"]
+        }
+      ],
+      "temporal_gate": {
+        "minimum_receipt_year_rule_field": "anfallsjahr_from",
+        "receipt_year_claim_field": "receipt_date_year",
+        "production_date_claim_field": "vehicle_origin_production_date",
+        "production_start_rule_field": "production_start",
+        "production_end_rule_field": "production_end"
+      },
+      "quantity": {
+        "claim_field": "replaced_quantity_apportioned",
+        "default": 1.0
+      },
+      "reference_cost_fields": [
+        "material_price_invoicing",
+        "labor_cost_average",
+        "incidental_costs_aqua",
+        "mobility_costs_aqua"
+      ]
+    }
+  }
+}

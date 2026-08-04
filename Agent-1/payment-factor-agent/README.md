@@ -15,7 +15,12 @@ The key point for review: the Contract Agent should determine contract eligibili
 
 ## Current Code Status
 
-This is not yet a finished production subagent implementation. The current logic exists as prototype/audit code:
+This is not yet a finished production subagent implementation. The original
+logic remains prototype/audit code, now alongside an additive portable core:
+
+- `payment_factor_core/` - profile-driven routing, deterministic agreement-matrix evaluation, learned-rule cache contract and safe grouping. It does not contain OEM contract content.
+- `profiles/` - MBC, BMW and JLR starter profiles. MBC is the first functional portable evaluator; BMW/JLR continue to use their validated legacy logic pending adapter migration.
+- `docs/portable_core.md` - current migration boundary and host-integration contract.
 
 - `scripts/payment_factor_agents.py` - payment-factor agent prototype.
 - `docs/mbc_gala_methodology.md` - Mercedes-Benz main-contract/GALA routing, compile-once, grouping, and cache governance.
@@ -51,6 +56,7 @@ This is why the future design should treat payment factors as separate audited s
 - `docs/full.md`: consolidated BMW/JLR context and proposed payment-factor architecture.
 - `scripts/`: payment-factor agent prototype and audit/rebuild code.
 - `methodology/`: rule-derivation code (scenario engines, ruleset re-extraction, provenance flagging). See `methodology/README.md`.
+- `payment_factor_core/` and `profiles/`: portable core and declarative contract profiles. See `docs/portable_core.md`.
 - `provenance/bmw_ruleset.json`: frozen ruleset the rules compile from.
 - `rules/`: payment-factor rules, overrides, and JLR data-handling rules used by the agent.
 - `skills/`: CLI-side skills and subagents used to build the agent, with a `SKILLS_USED.md` log and Copilot-adaptation notes.

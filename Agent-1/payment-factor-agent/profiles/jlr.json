@@ -1,0 +1,12 @@
+{
+  "profile_id": "jlr-technical-factor-v1",
+  "oem_aliases": ["JLR", "JAGUAR LAND ROVER"],
+  "contract_ids": ["JLR", "JLR_WARRANTY"],
+  "deterministic_plugins": [],
+  "grouping_fields": ["market", "product_family", "production_model_year", "repair_date", "claim_route"],
+  "asset_refs": {
+    "main_contract": "governed contract bundle configured by the host application",
+    "technical_outcomes": "approved JLR outcome source configured by the host application"
+  },
+  "plugin_settings": {}
+}

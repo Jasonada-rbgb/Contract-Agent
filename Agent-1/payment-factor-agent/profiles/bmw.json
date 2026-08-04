@@ -1,0 +1,12 @@
+{
+  "profile_id": "bmw-fixed-acceptance-v1",
+  "oem_aliases": ["BMW"],
+  "contract_ids": ["BMW"],
+  "deterministic_plugins": [],
+  "grouping_fields": ["market", "warranty_start_date", "repair_date", "warranty_type", "part_number"],
+  "asset_refs": {
+    "main_contract": "governed contract bundle configured by the host application",
+    "rate_schedule": "approved BMW rate schedule configured by the host application"
+  },
+  "plugin_settings": {}
+}
