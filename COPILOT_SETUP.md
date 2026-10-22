@@ -7,7 +7,7 @@ The included local launchers target Windows; the npm-based servers are cross-pla
 
 ## Included customizations
 
-- 56 pstack skills, imported from the MIT-licensed Cursor pstack plugin. See [the pstack source and license](./.github/skills/pstack/README.md).
+- 56+ skills, some imported from the MIT-licensed Cursor pstack plugin. See [the pstack source and license](./.github/skills/pstack/README.md).
 - A portable, workspace-level MCP configuration in [`.mcp.json`](./.mcp.json), covering Azure DevOps, Databricks, SlideForge, Chrome DevTools, Playwright, Power BI Modeling, and PowerPoint.
 - MCP tool definitions are provided by each server at runtime; they are not separate files to upload.
 
