@@ -42,11 +42,17 @@ ai/
 scripts/
 complaint-agent/
 debug.log
+databricks_mcp.log
 node_modules/
 package.json
 package-lock.json
 .playwright-cli/
+.playwright-mcp/
 .pytest_tmp/
+
+# Keep scripts bundled with workspace skills.
+!.github/skills/**/scripts/
+!.github/skills/**/scripts/**
 
 # Compiled assets
 *.pyc

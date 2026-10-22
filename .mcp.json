@@ -1,0 +1,56 @@
+{
+  "mcpServers": {
+    "databricks": {
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-File",
+        ".github\\mcp\\launch-databricks.ps1"
+      ]
+    },
+    "microsoft/azure-devops-mcp": {
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-File",
+        ".github\\mcp\\launch-azure-devops.ps1"
+      ]
+    },
+    "dev.slideforge/slideforge": {
+      "type": "http",
+      "url": "https://api.slideforge.dev/mcp/"
+    },
+    "io.github.ChromeDevTools/chrome-devtools-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "--registry",
+        "https://registry.npmjs.org/",
+        "chrome-devtools-mcp@1.11.0"
+      ]
+    },
+    "microsoft/playwright-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    },
+    "powerbi_modeling": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@microsoft/powerbi-modeling-mcp@latest",
+        "--start"
+      ]
+    },
+    "powerpoint": {
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-File",
+        ".github\\mcp\\launch-powerpoint.ps1"
+      ]
+    }
+  }
+}
