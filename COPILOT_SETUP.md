@@ -1,4 +1,6 @@
-# GitHub Copilot workspace setup
+# ADJ1DE skills
+
+GitHub Copilot workspace setup.
 
 Open this repository in VS Code with GitHub Copilot. The workspace skills are discovered from `.github/skills/`; no profile-wide skill installation is required.
 The included local launchers target Windows; the npm-based servers are cross-platform.
